@@ -8,21 +8,75 @@
   <h1>Welcome to WeHa 07 Boyoz!</h1>
   <p>This site is powered by GitHub Pages 🚀</p>
 
-<section style="background:black; color:white; text-align:center; padding:40px 0;">
-  <h2>🏆 Championship Poll</h2>
-  <p>Who do you think will win?</p>
+<section style="background:#222; color:#fff; text-align:center; padding:40px 0;">
+  <h2>😜 Who Are You Most Like?</h2>
+  <p>Answer the questions and find out if you’re D Mac, Shmoo, or Mr Mitt!</p>
 
-  <div id="poll" style="margin-top:20px;">
-    <button onclick="vote('D Mac')" style="margin:5px; padding:10px 20px;">D Mac</button>
-    <button onclick="vote('Shmoo')" style="margin:5px; padding:10px 20px;">Shmoo</button>
-    <button onclick="vote('Mr Mitt')" style="margin:5px; padding:10px 20px;">Mr Mitt</button>
-  </div>
-
-  <div id="results" style="margin-top:20px; display:none;">
-    <h3>Results</h3>
-    <p id="resultText"></p>
-  </div>
+  <div id="quiz"></div>
+  <div id="result" style="margin-top:20px; font-size:1.4rem; font-weight:bold;"></div>
 </section>
+
+<script>
+  const quizData = [
+    {
+      q: "What's your go-to move on game day?",
+      options: {
+        "D Mac": "Crush it with energy 💪",
+        "Shmoo": "Keep it chill 😎",
+        "Mr Mitt": "Make a sneaky play 🤔"
+      }
+    },
+    {
+      q: "Favorite hangout spot?",
+      options: {
+        "D Mac": "The gym 🏋️",
+        "Shmoo": "Anywhere with snacks 🍕",
+        "Mr Mitt": "Library (secret study mode) 📚"
+      }
+    },
+    {
+      q: "Pick your hype song:",
+      options: {
+        "D Mac": "Eye of the Tiger 🎶",
+        "Shmoo": "Don’t Worry Be Happy 🎵",
+        "Mr Mitt": "Lose Yourself 🎧"
+      }
+    }
+  ];
+
+  let scores = { "D Mac": 0, "Shmoo": 0, "Mr Mitt": 0 };
+  let currentQ = 0;
+
+  function renderQuestion() {
+    if (currentQ >= quizData.length) {
+      showResult();
+      return;
+    }
+    const container = document.getElementById("quiz");
+    const qObj = quizData[currentQ];
+    let html = `<h3>${qObj.q}</h3>`;
+    Object.entries(qObj.options).forEach(([person, text]) => {
+      html += `<button onclick="vote('${person}')" style="margin:5px; padding:10px 20px;">${text}</button>`;
+    });
+    container.innerHTML = html;
+  }
+
+  function vote(person) {
+    scores[person]++;
+    currentQ++;
+    renderQuestion();
+  }
+
+  function showResult() {
+    let winner = Object.keys(scores).reduce((a,b) => scores[a] > scores[b] ? a : b);
+    document.getElementById("quiz").innerHTML = "";
+    document.getElementById("result").innerText = `🎉 You are most like ${winner}! 🎉`;
+  }
+
+  // Start quiz
+  renderQuestion();
+</script>
+
 
 
 <section style="background:#111; color:#fff; text-align:center; padding:40px 0;">
