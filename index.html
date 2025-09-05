@@ -24,6 +24,36 @@
   </div>
 </section>
 
+
+<section style="background:#111; color:#fff; text-align:center; padding:40px 0;">
+  <h2>🎰 Championship Predictor</h2>
+  <p>Click the button and let fate decide who wins!</p>
+
+  <div id="prediction" style="margin:20px; font-size:1.5rem; min-height:2em;"></div>
+  <button onclick="spin()" style="padding:10px 20px; font-size:1rem;">Spin the Wheel</button>
+</section>
+
+<script>
+  const players = ["D Mac", "Shmoo", "Mr Mitt"];
+
+  function spin() {
+    const display = document.getElementById("prediction");
+    let count = 0;
+    const interval = setInterval(() => {
+      display.textContent = players[Math.floor(Math.random() * players.length)];
+      count++;
+      if (count > 15) { // slows after ~1.5s
+        clearInterval(interval);
+        const winner = players[Math.floor(Math.random() * players.length)];
+        display.textContent = `🏆 Winner: ${winner}! 🏆`;
+      }
+    }, 100);
+  }
+</script>
+
+
+
+  
 <script>
   let votes = { "D Mac": 0, "Shmoo": 0, "Mr Mitt": 0 };
 
