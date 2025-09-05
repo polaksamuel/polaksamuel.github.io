@@ -7,5 +7,43 @@
 <body style="font-family: Arial, sans-serif; text-align: center; padding-top: 50px;">
   <h1>Welcome to WeHa 07 Boyoz!</h1>
   <p>This site is powered by GitHub Pages 🚀</p>
+
+<section style="background:black; color:white; text-align:center; padding:40px 0;">
+  <h2>🏆 Championship Poll</h2>
+  <p>Who do you think will win?</p>
+
+  <div id="poll" style="margin-top:20px;">
+    <button onclick="vote('D Mac')" style="margin:5px; padding:10px 20px;">D Mac</button>
+    <button onclick="vote('Shmoo')" style="margin:5px; padding:10px 20px;">Shmoo</button>
+    <button onclick="vote('Mr Mitt')" style="margin:5px; padding:10px 20px;">Mr Mitt</button>
+  </div>
+
+  <div id="results" style="margin-top:20px; display:none;">
+    <h3>Results</h3>
+    <p id="resultText"></p>
+  </div>
+</section>
+
+<script>
+  let votes = { "D Mac": 0, "Shmoo": 0, "Mr Mitt": 0 };
+
+  function vote(person) {
+    votes[person]++;
+    showResults();
+  }
+
+  function showResults() {
+    let total = votes["D Mac"] + votes["Shmoo"] + votes["Mr Mitt"];
+    let text = `
+      D Mac: ${Math.round((votes["D Mac"]/total)*100) || 0}% <br>
+      Shmoo: ${Math.round((votes["Shmoo"]/total)*100) || 0}% <br>
+      Mr Mitt: ${Math.round((votes["Mr Mitt"]/total)*100) || 0}%
+    `;
+    document.getElementById("resultText").innerHTML = text;
+    document.getElementById("results").style.display = "block";
+  }
+</script>
+
+
 </body>
 </html>
