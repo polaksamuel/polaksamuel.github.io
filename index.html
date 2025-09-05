@@ -1,57 +1,129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>WeHa 07 Boyoz</title>
+
+  <!-- Google Font (nice + readable) -->
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; text-align:center; }
-    section { padding:40px 0; }
-    h1,h2,h3 { margin:10px 0; }
-    button { cursor:pointer; border:none; border-radius:6px; padding:10px 20px; font-size:1rem; }
-    button:hover { opacity:0.9; }
+    :root{
+      --bg:#0f1222;          /* page background */
+      --pane:#14183a;        /* card background */
+      --muted:#8ea1ff;       /* accent text */
+      --brand:#39d0ff;       /* primary accent */
+      --rim:#2a3170;         /* subtle borders */
+      --text:#e7ebff;        /* main text */
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;background:var(--bg);color:var(--text);font-family:Poppins,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    a{color:var(--brand);text-decoration:none}
+    .container{max-width:1000px;margin:0 auto;padding:0 20px}
+
+    /* Hero */
+    .hero{
+      position:relative;
+      background:
+        radial-gradient(1200px 400px at 50% -10%, #2b3170 0%, rgba(43,49,112,0) 60%),
+        linear-gradient(180deg, #171c47 0%, #0f1222 70%);
+      overflow:hidden;
+    }
+    .hero-emoji{
+      position:absolute; inset:0;
+      background:
+        url("https://images.unsplash.com/photo-1600880292089-90e7e86ef72e?q=80&w=1600&auto=format&fit=crop") center/cover no-repeat;
+      opacity:.16; filter:grayscale(20%);
+    }
+    .hero-inner{position:relative; padding:72px 0 48px; text-align:center}
+    .tag{display:inline-block; padding:6px 12px; border:1px solid var(--rim); border-radius:999px; font-size:.9rem; color:var(--muted); background:rgba(20,24,58,.5); backdrop-filter: blur(6px);}
+    h1{font-size:clamp(28px, 5vw, 56px); line-height:1.05; margin:14px 0 10px; font-weight:800}
+    .sub{opacity:.85; font-size:clamp(14px,2.2vw,18px)}
+
+    /* Sections */
+    section{padding:36px 0}
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00));
+      border:1px solid var(--rim);
+      border-radius:18px;
+      box-shadow:0 18px 40px rgba(0,0,0,.25);
+      padding:26px;
+    }
+    h2{font-size:clamp(22px,3.2vw,28px); margin:0 0 4px}
+    .muted{color:var(--muted)}
+    .spacer{height:24px}
+
+    /* Buttons */
+    .btn{cursor:pointer; border:none; border-radius:12px; padding:12px 18px; font-weight:600; background:var(--brand); color:#08112a}
+    .btn.secondary{background:#2b3170;color:var(--text)}
+    .btn:disabled{opacity:.6; cursor:not-allowed}
+
+    /* Quiz styles */
+    #quiz h3{margin:14px 0 10px; font-size:clamp(18px,2.6vw,22px)}
+    #quiz .btn{margin:6px}
+
+    /* Spinner */
+    .wheel-wrap{display:flex; justify-content:center; margin:16px 0; position:relative}
+    .pointer{position:absolute; top:-8px; font-size:1.3rem}
+    #wheel{
+      width:320px; height:320px; border-radius:50%; border:10px solid #fff;
+      background: conic-gradient(#ff6b6b 0 120deg, #4dabf7 120deg 240deg, #51cf66 240deg 360deg);
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+      transition: transform 4s cubic-bezier(.33,1,.68,1);
+    }
+    .legend{font-size:.95rem; opacity:.9}
+
+    footer{padding:36px 0; text-align:center; opacity:.7; font-size:.9rem}
   </style>
 </head>
 <body>
 
-  <h1>Welcome to WeHa 07 Boyoz!</h1>
-  <p>This site is powered by GitHub Pages 🚀</p>
+  <!-- HERO -->
+  <div class="hero">
+    <div class="hero-emoji"></div>
+    <div class="hero-inner container">
+      <span class="tag">WEHA 07 BOYOZ — OFFICIAL FUN ZONE</span>
+      <h1>Welcome to WeHa 07 Boyoz!</h1>
+      <p class="sub">Polls, quizzes, and a championship wheel — all powered by GitHub Pages 🚀</p>
+    </div>
+  </div>
 
-  <!-- QUIZ -->
-  <section style="background:#222; color:#fff;">
-    <h2>😜 Who Are You Most Like?</h2>
-    <p>Answer the questions and find out if you’re D Mac, Shmoo, or Mr Mitt!</p>
+  <main class="container">
 
-    <div id="quiz"></div>
-    <div id="result" style="margin-top:20px; font-size:1.4rem; font-weight:bold;"></div>
-  </section>
-
-  <!-- REAL WHEEL SPINNER -->
-  <section style="background:#111; color:#fff;">
-    <h2>🎡 Championship Decider</h2>
-    <p>Spin the wheel to see who wins!</p>
-
-    <div style="display:flex; justify-content:center; margin:20px 0; position:relative;">
-      <!-- pointer -->
-      <div style="position:absolute; top:-6px;">
-        <div style="font-size:1.4rem; line-height:1;">🔺</div>
+    <!-- QUIZ -->
+    <section>
+      <div class="card">
+        <h2>😜 Who Are You Most Like?</h2>
+        <p class="muted">Answer a few questions to see if you’re D Mac, Shmoo, or Mr Mitt.</p>
+        <div class="spacer"></div>
+        <div id="quiz"></div>
+        <div id="result" style="margin-top:18px; font-size:1.2rem; font-weight:700;"></div>
       </div>
-      <!-- wheel -->
-      <div id="wheel" style="
-        width:300px; height:300px; border-radius:50%; border:10px solid #fff;
-        background:conic-gradient(#e74c3c 0 120deg, #3498db 120deg 240deg, #2ecc71 240deg 360deg);
-        transition: transform 4s cubic-bezier(0.33, 1, 0.68, 1);
-      "></div>
-    </div>
+    </section>
 
-    <div style="margin-top:10px; font-size:0.95rem; opacity:.85">
-      Red = D Mac · Blue = Shmoo · Green = Mr Mitt
-    </div>
+    <!-- REAL WHEEL SPINNER -->
+    <section>
+      <div class="card" style="text-align:center">
+        <h2>🎡 Championship Decider</h2>
+        <p class="muted">Tap spin and let fate choose the champ.</p>
+        <div class="wheel-wrap">
+          <div class="pointer">🔺</div>
+          <div id="wheel"></div>
+        </div>
+        <div class="legend">Red = D Mac · Blue = Shmoo · Green = Mr Mitt</div>
+        <div class="spacer"></div>
+        <button class="btn" onclick="spinWheel()">Spin</button>
+        <div id="winner" style="margin-top:16px; font-size:1.2rem; font-weight:700;"></div>
+      </div>
+    </section>
 
-    <button onclick="spinWheel()" style="margin-top:16px;">Spin</button>
-    <div id="winner" style="margin-top:20px; font-size:1.5rem; font-weight:bold;"></div>
-  </section>
+  </main>
 
-  <!-- SCRIPT -->
+  <footer>
+    Built with ❤️ on GitHub Pages • <a href="https://weha07boyoz.com">weha07boyoz.com</a>
+  </footer>
+
   <script>
     // ---------------- QUIZ ----------------
     const quizData = [
@@ -85,55 +157,46 @@
     let currentQ = 0;
 
     function renderQuestion() {
-      if (currentQ >= quizData.length) { showResult(); return; }
       const container = document.getElementById("quiz");
+      if (currentQ >= quizData.length) { showResult(); return; }
       const qObj = quizData[currentQ];
       let html = `<h3>${qObj.q}</h3>`;
       Object.entries(qObj.options).forEach(([person, text]) => {
-        html += `<button onclick="vote('${person}')" style="margin:5px;">${text}</button>`;
+        html += `<button class="btn secondary" onclick="vote('${person}')">${text}</button>`;
       });
       container.innerHTML = html;
     }
-
-    function vote(person) { scores[person]++; currentQ++; renderQuestion(); }
-
-    function showResult() {
-      let winner = Object.keys(scores).reduce((a,b) => scores[a] > scores[b] ? a : b);
+    function vote(person){ scores[person]++; currentQ++; renderQuestion(); }
+    function showResult(){
+      const winner = Object.keys(scores).reduce((a,b)=>scores[a]>scores[b]?a:b);
       document.getElementById("quiz").innerHTML = "";
-      document.getElementById("result").innerText = `🎉 You are most like ${winner}! 🎉`;
+      document.getElementById("result").textContent = `🎉 You are most like ${winner}!`;
     }
-
-    // start quiz
     renderQuestion();
 
     // ---------------- REAL WHEEL SPINNER ----------------
     let currentRotation = 0;
-    const players = ["D Mac", "Shmoo", "Mr Mitt"]; // order matches the 3 slices in the gradient
+    const players = ["D Mac","Shmoo","Mr Mitt"]; // order matches slices
 
-    function spinWheel() {
+    function spinWheel(){
       const wheel = document.getElementById("wheel");
-      const winnerDisplay = document.getElementById("winner");
+      const winnerEl = document.getElementById("winner");
+      winnerEl.textContent = "";
 
-      // at least 3 full spins + random degrees
-      const extraRotation = Math.floor(Math.random() * 360);
-      const spins = 1080; // 3 * 360
+      const extraRotation = Math.floor(Math.random()*360);
+      const spins = 1080; // 3 full turns
       const finalRotation = currentRotation + spins + extraRotation;
 
       wheel.style.transform = `rotate(${finalRotation}deg)`;
       currentRotation = finalRotation;
 
-      // Decide winner after animation completes (4s)
-      setTimeout(() => {
-        // Normalize to 0-359 deg where 0deg is at the pointer (top)
+      setTimeout(()=>{
         const normalized = (finalRotation % 360 + 360) % 360;
-
-        // Each slice is 120deg in this order: 0-120 = D Mac (red), 120-240 = Shmoo (blue), 240-360 = Mr Mitt (green)
         let winner;
-        if (normalized < 120) winner = players[0];
-        else if (normalized < 240) winner = players[1];
-        else winner = players[2];
-
-        winnerDisplay.textContent = `🏆 Winner: ${winner}! 🏆`;
+        if (normalized < 120) winner = players[0];       // Red
+        else if (normalized < 240) winner = players[1];  // Blue
+        else winner = players[2];                        // Green
+        winnerEl.textContent = `🏆 Winner: ${winner}!`;
       }, 4000);
     }
   </script>
