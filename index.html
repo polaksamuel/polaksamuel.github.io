@@ -1,204 +1,246 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>WeHa 07 Boyoz</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WeHa 07 Boyoz</title>
 
-  <!-- Google Font (nice + readable) -->
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
 
-  <style>
-    :root{
-      --bg:#0f1222;          /* page background */
-      --pane:#14183a;        /* card background */
-      --muted:#8ea1ff;       /* accent text */
-      --brand:#39d0ff;       /* primary accent */
-      --rim:#2a3170;         /* subtle borders */
-      --text:#e7ebff;        /* main text */
-    }
-    *{box-sizing:border-box}
-    html,body{margin:0;background:var(--bg);color:var(--text);font-family:Poppins,system-ui,Segoe UI,Roboto,Arial,sans-serif}
-    a{color:var(--brand);text-decoration:none}
-    .container{max-width:1000px;margin:0 auto;padding:0 20px}
+<style>
+  :root{
+    --bg:#0b0e1a;
+    --ink:#e9ecff;
+    --muted:#aab5ff;
+    --brand:#38d3ff;
+    --card:#131735;
+    --rim:#2b3170;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Poppins,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  a{color:var(--brand);text-decoration:none}
+  .container{max-width:1080px;margin:0 auto;padding:0 20px}
 
-    /* Hero */
-    .hero{
-      position:relative;
-      background:
-        radial-gradient(1200px 400px at 50% -10%, #2b3170 0%, rgba(43,49,112,0) 60%),
-        linear-gradient(180deg, #171c47 0%, #0f1222 70%);
-      overflow:hidden;
-    }
-    .hero-emoji{
-      position:absolute; inset:0;
-      background:
-        url("https://images.unsplash.com/photo-1600880292089-90e7e86ef72e?q=80&w=1600&auto=format&fit=crop") center/cover no-repeat;
-      opacity:.16; filter:grayscale(20%);
-    }
-    .hero-inner{position:relative; padding:72px 0 48px; text-align:center}
-    .tag{display:inline-block; padding:6px 12px; border:1px solid var(--rim); border-radius:999px; font-size:.9rem; color:var(--muted); background:rgba(20,24,58,.5); backdrop-filter: blur(6px);}
-    h1{font-size:clamp(28px, 5vw, 56px); line-height:1.05; margin:14px 0 10px; font-weight:800}
-    .sub{opacity:.85; font-size:clamp(14px,2.2vw,18px)}
+  /* ---------- NAV ---------- */
+  .nav{
+    position:fixed;top:0;left:0;right:0;z-index:50;
+    display:flex;justify-content:space-between;align-items:center;
+    padding:14px 20px;background:linear-gradient(180deg,rgba(10,12,24,.85),rgba(10,12,24,0));
+    backdrop-filter: blur(6px);
+    border-bottom:1px solid rgba(255,255,255,.06);
+  }
+  .brand{font-weight:800;letter-spacing:.5px}
+  .nav a.btn{padding:10px 14px;border-radius:10px;background:#2b3170;color:var(--ink);font-weight:600}
 
-    /* Sections */
-    section{padding:36px 0}
-    .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.00));
-      border:1px solid var(--rim);
-      border-radius:18px;
-      box-shadow:0 18px 40px rgba(0,0,0,.25);
-      padding:26px;
-    }
-    h2{font-size:clamp(22px,3.2vw,28px); margin:0 0 4px}
-    .muted{color:var(--muted)}
-    .spacer{height:24px}
+  /* ---------- HERO ---------- */
+  .hero{
+    position:relative;height:100svh;display:grid;place-items:center;text-align:center;overflow:hidden;
+    background:#0b0e1a;
+  }
+  .hero::before{
+    content:"";position:absolute;inset:-10%;
+    background:url("https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=2000&auto=format&fit=crop")
+      center / cover no-repeat;
+    filter:grayscale(10%) contrast(1.05) brightness(.9);
+    transform:scale(1.05);
+  }
+  .hero::after{
+    content:"";position:absolute;inset:0;
+    background:
+      radial-gradient(1200px 500px at 50% -10%, rgba(41,51,140,.75) 0%, rgba(41,51,140,0) 65%),
+      linear-gradient(180deg, rgba(10,12,24,.25) 0%, #0b0e1a 75%);
+  }
+  .hero-inner{position:relative;z-index:2;padding:0 20px}
+  .tag{display:inline-block;padding:7px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;color:var(--muted);font-size:.9rem;background:rgba(20,24,58,.45)}
+  h1{font-size:clamp(36px,8vw,80px);line-height:1.02;margin:16px 0 6px;font-weight:800;text-shadow:0 8px 40px rgba(0,0,0,.6)}
+  .glow{color:#fff; text-shadow:0 0 22px rgba(56,211,255,.55), 0 0 44px rgba(56,211,255,.35)}
+  .sub{opacity:.9;font-size:clamp(16px,2.2vw,20px)}
+  .cta{margin-top:22px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .btn{cursor:pointer;border:none;border-radius:14px;padding:12px 18px;font-weight:700}
+  .btn.primary{background:var(--brand);color:#001022}
+  .btn.ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);color:var(--ink)}
 
-    /* Buttons */
-    .btn{cursor:pointer; border:none; border-radius:12px; padding:12px 18px; font-weight:600; background:var(--brand); color:#08112a}
-    .btn.secondary{background:#2b3170;color:var(--text)}
-    .btn:disabled{opacity:.6; cursor:not-allowed}
+  /* wave divider */
+  .wave{display:block;height:84px;margin-top:-84px}
+  .wave svg{display:block;width:100%;height:100%}
 
-    /* Quiz styles */
-    #quiz h3{margin:14px 0 10px; font-size:clamp(18px,2.6vw,22px)}
-    #quiz .btn{margin:6px}
+  /* ---------- SECTIONS / CARDS ---------- */
+  main{background:linear-gradient(180deg,#0b0e1a 0%, #0f1330 100%)}
+  section{padding:54px 0}
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+    border:1px solid var(--rim); border-radius:20px; padding:26px;
+    box-shadow:0 22px 50px rgba(0,0,0,.28);
+  }
+  h2{margin:0 0 8px;font-size:clamp(24px,3.2vw,30px)}
+  .muted{color:var(--muted)}
 
-    /* Spinner */
-    .wheel-wrap{display:flex; justify-content:center; margin:16px 0; position:relative}
-    .pointer{position:absolute; top:-8px; font-size:1.3rem}
-    #wheel{
-      width:320px; height:320px; border-radius:50%; border:10px solid #fff;
-      background: conic-gradient(#ff6b6b 0 120deg, #4dabf7 120deg 240deg, #51cf66 240deg 360deg);
-      box-shadow:0 10px 30px rgba(0,0,0,.35);
-      transition: transform 4s cubic-bezier(.33,1,.68,1);
-    }
-    .legend{font-size:.95rem; opacity:.9}
+  /* quiz */
+  #quiz h3{margin:14px 0 12px}
+  #quiz .btn{margin:6px;background:#2b3170;color:var(--ink)}
+  #result{font-weight:700}
 
-    footer{padding:36px 0; text-align:center; opacity:.7; font-size:.9rem}
-  </style>
+  /* wheel */
+  .wheel-wrap{display:flex;justify-content:center;margin:18px 0;position:relative}
+  .pointer{position:absolute;top:-6px;font-size:1.35rem;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
+  #wheel{
+    width:340px;height:340px;border-radius:50%;border:10px solid #fff;
+    background:conic-gradient(#ff6b6b 0 120deg, #4dabf7 120deg 240deg, #51cf66 240deg 360deg);
+    box-shadow:0 12px 36px rgba(0,0,0,.35), inset 0 0 40px rgba(255,255,255,.06);
+    transition:transform 4s cubic-bezier(.33,1,.68,1);
+  }
+  .legend{opacity:.9;font-size:.95rem}
+
+  footer{padding:44px 0;text-align:center;opacity:.75;font-size:.9rem}
+  .section-title{display:flex;align-items:center;gap:10px;justify-content:center}
+  .section-title .dot{width:8px;height:8px;background:var(--brand);border-radius:50%;box-shadow:0 0 18px var(--brand)}
+</style>
 </head>
 <body>
 
-  <!-- HERO -->
-  <div class="hero">
-    <div class="hero-emoji"></div>
-    <div class="hero-inner container">
-      <span class="tag">WEHA 07 BOYOZ — OFFICIAL FUN ZONE</span>
-      <h1>Welcome to WeHa 07 Boyoz!</h1>
-      <p class="sub">Polls, quizzes, and a championship wheel — all powered by GitHub Pages 🚀</p>
+<!-- NAV -->
+<div class="nav">
+  <div class="brand">WEHA 07 BOYOZ</div>
+  <div>
+    <a href="#quiz-section" class="btn">Quiz</a>
+    <a href="#wheel-section" class="btn">Wheel</a>
+  </div>
+</div>
+
+<!-- HERO -->
+<header class="hero" id="top">
+  <div class="hero-inner container">
+    <span class="tag">OFFICIAL FANTASY BBALL SITE</span>
+    <h1><span class="glow">Brought to you by Shmoo, Gunner, and Mr Mitt</span></h1>
+    <p class="sub">Memes, mayhem, and mildly scientific predictions.</p>
+    <div class="cta">
+      <a href="#quiz-section" class="btn primary">Take the Quiz</a>
+      <a href="#wheel-section" class="btn ghost">Spin the Wheel</a>
     </div>
   </div>
+</header>
 
-  <main class="container">
+<!-- Wave divider -->
+<div class="wave">
+  <svg viewBox="0 0 1440 84" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path fill="#0f1330" d="M0,64L80,58.7C160,53,320,43,480,42.7C640,43,800,53,960,64C1120,75,1280,85,1360,90.7L1440,96L1440,0L1360,0C1280,0,1120,0,960,0C800,0,640,0,480,0C320,0,160,0,80,0L0,0Z"/>
+  </svg>
+</div>
+
+<main>
+  <div class="container">
 
     <!-- QUIZ -->
-    <section>
+    <section id="quiz-section">
       <div class="card">
-        <h2>😜 Who Are You Most Like?</h2>
-        <p class="muted">Answer a few questions to see if you’re D Mac, Shmoo, or Mr Mitt.</p>
-        <div class="spacer"></div>
-        <div id="quiz"></div>
-        <div id="result" style="margin-top:18px; font-size:1.2rem; font-weight:700;"></div>
+        <div class="section-title"><span class="dot"></span><h2>😜 Who Are You Most Like?</h2><span class="dot"></span></div>
+        <p class="muted" style="text-align:center;margin-top:6px">Answer a few questions to see if you’re D Mac, Shmoo, or Mr Mitt.</p>
+        <div id="quiz" style="margin-top:18px"></div>
+        <div id="result" style="margin-top:16px;font-size:1.2rem;"></div>
       </div>
     </section>
 
-    <!-- REAL WHEEL SPINNER -->
-    <section>
+    <!-- WHEEL -->
+    <section id="wheel-section">
       <div class="card" style="text-align:center">
-        <h2>🎡 Championship Decider</h2>
-        <p class="muted">Tap spin and let fate choose the champ.</p>
+        <div class="section-title"><span class="dot"></span><h2>🎡 Championship Decider</h2><span class="dot"></span></div>
+        <p class="muted">Tap spin and let fate crown the champ.</p>
         <div class="wheel-wrap">
           <div class="pointer">🔺</div>
           <div id="wheel"></div>
         </div>
         <div class="legend">Red = D Mac · Blue = Shmoo · Green = Mr Mitt</div>
-        <div class="spacer"></div>
-        <button class="btn" onclick="spinWheel()">Spin</button>
-        <div id="winner" style="margin-top:16px; font-size:1.2rem; font-weight:700;"></div>
+        <div style="height:14px"></div>
+        <button class="btn primary" onclick="spinWheel()">Spin</button>
+        <div id="winner" style="margin-top:16px;font-weight:700"></div>
       </div>
     </section>
 
-  </main>
+  </div>
+</main>
 
-  <footer>
-    Built with ❤️ on GitHub Pages • <a href="https://weha07boyoz.com">weha07boyoz.com</a>
-  </footer>
+<footer>
+  Built with ❤️ on GitHub Pages • <a href="https://weha07boyoz.com">weha07boyoz.com</a>
+</footer>
 
-  <script>
-    // ---------------- QUIZ ----------------
-    const quizData = [
-      {
-        q: "What's your go-to move on game day?",
-        options: {
-          "D Mac": "Crush it with energy 💪",
-          "Shmoo": "Keep it chill 😎",
-          "Mr Mitt": "Make a sneaky play 🤔"
-        }
-      },
-      {
-        q: "Favorite hangout spot?",
-        options: {
-          "D Mac": "The gym 🏋️",
-          "Shmoo": "Anywhere with snacks 🍕",
-          "Mr Mitt": "Library (secret study mode) 📚"
-        }
-      },
-      {
-        q: "Pick your hype song:",
-        options: {
-          "D Mac": "Eye of the Tiger 🎶",
-          "Shmoo": "Don’t Worry Be Happy 🎵",
-          "Mr Mitt": "Lose Yourself 🎧"
-        }
+<script>
+  /* ---------- Smooth anchor scroll ---------- */
+  document.querySelectorAll('a[href^="#"]').forEach(a=>{
+    a.addEventListener('click',e=>{
+      const id=a.getAttribute('href').slice(1);
+      const el=document.getElementById(id);
+      if(el){ e.preventDefault(); window.scrollTo({top:el.offsetTop-60,behavior:'smooth'}); }
+    });
+  });
+
+  /* ---------- QUIZ ---------- */
+  const quizData = [
+    {
+      q: "What's your go-to move on game day?",
+      options: {
+        "D Mac": "Crush it with energy 💪",
+        "Shmoo": "Keep it chill 😎",
+        "Mr Mitt": "Make a sneaky play 🤔"
       }
-    ];
-
-    let scores = { "D Mac": 0, "Shmoo": 0, "Mr Mitt": 0 };
-    let currentQ = 0;
-
-    function renderQuestion() {
-      const container = document.getElementById("quiz");
-      if (currentQ >= quizData.length) { showResult(); return; }
-      const qObj = quizData[currentQ];
-      let html = `<h3>${qObj.q}</h3>`;
-      Object.entries(qObj.options).forEach(([person, text]) => {
-        html += `<button class="btn secondary" onclick="vote('${person}')">${text}</button>`;
-      });
-      container.innerHTML = html;
+    },
+    {
+      q: "Favorite hangout spot?",
+      options: {
+        "D Mac": "The gym 🏋️",
+        "Shmoo": "Anywhere with snacks 🍕",
+        "Mr Mitt": "Library (secret study mode) 📚"
+      }
+    },
+    {
+      q: "Pick your hype song:",
+      options: {
+        "D Mac": "Eye of the Tiger 🎶",
+        "Shmoo": "Don’t Worry Be Happy 🎵",
+        "Mr Mitt": "Lose Yourself 🎧"
+      }
     }
-    function vote(person){ scores[person]++; currentQ++; renderQuestion(); }
-    function showResult(){
-      const winner = Object.keys(scores).reduce((a,b)=>scores[a]>scores[b]?a:b);
-      document.getElementById("quiz").innerHTML = "";
-      document.getElementById("result").textContent = `🎉 You are most like ${winner}!`;
-    }
-    renderQuestion();
+  ];
+  let scores = { "D Mac":0, "Shmoo":0, "Mr Mitt":0 }, currentQ = 0;
+  function renderQuestion(){
+    const box=document.getElementById("quiz");
+    if(currentQ>=quizData.length){ showResult(); return; }
+    const q=quizData[currentQ];
+    let html=`<h3 style="text-align:center">${q.q}</h3><div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center">`;
+    Object.entries(q.options).forEach(([who,text])=>{
+      html+=`<button class="btn" style="background:#2b3170;color:var(--ink)" onclick="pick('${who}')">${text}</button>`;
+    });
+    html+='</div>';
+    box.innerHTML=html;
+  }
+  function pick(who){ scores[who]++; currentQ++; renderQuestion(); }
+  function showResult(){
+    const winner=Object.keys(scores).reduce((a,b)=>scores[a]>scores[b]?a:b);
+    document.getElementById("quiz").innerHTML="";
+    document.getElementById("result").textContent=`🎉 You are most like ${winner}!`;
+  }
+  renderQuestion();
 
-    // ---------------- REAL WHEEL SPINNER ----------------
-    let currentRotation = 0;
-    const players = ["D Mac","Shmoo","Mr Mitt"]; // order matches slices
-
-    function spinWheel(){
-      const wheel = document.getElementById("wheel");
-      const winnerEl = document.getElementById("winner");
-      winnerEl.textContent = "";
-
-      const extraRotation = Math.floor(Math.random()*360);
-      const spins = 1080; // 3 full turns
-      const finalRotation = currentRotation + spins + extraRotation;
-
-      wheel.style.transform = `rotate(${finalRotation}deg)`;
-      currentRotation = finalRotation;
-
-      setTimeout(()=>{
-        const normalized = (finalRotation % 360 + 360) % 360;
-        let winner;
-        if (normalized < 120) winner = players[0];       // Red
-        else if (normalized < 240) winner = players[1];  // Blue
-        else winner = players[2];                        // Green
-        winnerEl.textContent = `🏆 Winner: ${winner}!`;
-      }, 4000);
-    }
-  </script>
+  /* ---------- WHEEL ---------- */
+  let currentRotation=0;
+  const players=["D Mac","Shmoo","Mr Mitt"]; // order matches slices
+  function spinWheel(){
+    const wheel=document.getElementById("wheel");
+    const out=document.getElementById("winner");
+    out.textContent="";
+    const extra=Math.floor(Math.random()*360);
+    const spins=1080;
+    const final=currentRotation+spins+extra;
+    wheel.style.transform=`rotate(${final}deg)`;
+    currentRotation=final;
+    setTimeout(()=>{
+      const deg=((final%360)+360)%360;
+      let winner;
+      if(deg<120) winner=players[0];
+      else if(deg<240) winner=players[1];
+      else winner=players[2];
+      out.textContent=`🏆 Winner: ${winner}!`;
+    },4000);
+  }
+</script>
 </body>
 </html>
