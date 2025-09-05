@@ -104,6 +104,13 @@
   <div>
     <a href="#quiz-section" class="btn">Quiz</a>
     <a href="#wheel-section" class="btn">Wheel</a>
+    <div class="brand">WEHA 07 BOYOZ</div>
+<div>
+  <a href="#quiz-section" class="btn">Quiz</a>
+  <a href="#wheel-section" class="btn">Wheel</a>
+  <a href="#history-section" class="btn">History</a> <!-- add this -->
+</div>
+
   </div>
 </div>
 
@@ -156,6 +163,21 @@
       </div>
     </section>
 
+<!-- LEAGUE HISTORY -->
+<section id="history-section">
+  <div class="card" style="text-align:center">
+    <div class="section-title">
+      <span class="dot"></span><h2>🏆 Hall of Champions</h2><span class="dot"></span>
+    </div>
+    <p class="muted">All-time winners & finals results</p>
+    <div id="history"></div>
+  </div>
+</section>
+
+
+
+
+    
   </div>
 </main>
 
@@ -241,6 +263,67 @@
       out.textContent=`🏆 Winner: ${winner}!`;
     },4000);
   }
+
+
+
+  // ====== HALL OF CHAMPIONS (edit this list anytime) ======
+const HISTORY = [
+  { season: 2017, champion: "Shmoo",   runnerUp: "D Mac",   score: "142–121" },
+  { season: 2018, champion: "Mr Mitt", runnerUp: "Shmoo",   score: "128–122" },
+  { season: 2019, champion: "D Mac",   runnerUp: "Mr Mitt", score: "137–129" },
+  { season: 2020, champion: "Shmoo",   runnerUp: "Gunner",  score: "131–118" },
+  { season: 2021, champion: "Gunner",  runnerUp: "D Mac",   score: "125–123" },
+  { season: 2022, champion: "Mr Mitt", runnerUp: "Shmoo",   score: "134–127" },
+  { season: 2023, champion: "D Mac",   runnerUp: "Gunner",  score: "139–130" },
+];
+
+function renderHistory() {
+  const el = document.getElementById("history");
+  if (!el) return;
+
+  // Totals by champ
+  const totalsMap = {};
+  HISTORY.forEach(r => totalsMap[r.champion] = (totalsMap[r.champion] || 0) + 1);
+  const totalsLine = Object.entries(totalsMap)
+    .sort((a,b)=>b[1]-a[1])
+    .map(([n,c]) => `${n}: ${c}`)
+    .join(" · ");
+
+  // Rows (newest first)
+  const rows = [...HISTORY]
+    .sort((a,b)=>b.season-a.season)
+    .map(r => `
+      <tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+        <td style="padding:10px 8px">${r.season}</td>
+        <td style="padding:10px 8px"><b>${r.champion}</b> 🥇</td>
+        <td style="padding:10px 8px">${r.runnerUp || "-"}</td>
+        <td style="padding:10px 8px">${r.score || "-"}</td>
+      </tr>
+    `).join("");
+
+  el.innerHTML = `
+    <div style="overflow:auto">
+      <table style="width:100%; border-collapse:collapse; text-align:left;">
+        <thead>
+          <tr>
+            <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Season</th>
+            <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Champion</th>
+            <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Runner-up</th>
+            <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Final</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <div style="margin-top:10px; font-size:.95rem; opacity:.85">
+      🏅 Total titles — ${totalsLine}
+    </div>
+  `;
+}
+
+// call after everything else has loaded/executed
+renderHistory();
+
 </script>
 </body>
 </html>
