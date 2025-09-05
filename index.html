@@ -4,14 +4,14 @@
   <meta charset="UTF-8">
   <title>WeHa 07 Boyoz</title>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; }
+    body { font-family: Arial, sans-serif; margin:0; background:#f5f5f5; text-align:center; }
     section { padding:40px 0; }
     h1,h2,h3 { margin:10px 0; }
-    button { cursor:pointer; border:none; border-radius:6px; }
+    button { cursor:pointer; border:none; border-radius:6px; padding:10px 20px; font-size:1rem; }
     button:hover { opacity:0.9; }
   </style>
 </head>
-<body style="text-align: center;">
+<body>
 
   <h1>Welcome to WeHa 07 Boyoz!</h1>
   <p>This site is powered by GitHub Pages 🚀</p>
@@ -25,12 +25,30 @@
     <div id="result" style="margin-top:20px; font-size:1.4rem; font-weight:bold;"></div>
   </section>
 
-  <!-- SPINNER -->
+  <!-- REAL WHEEL SPINNER -->
   <section style="background:#111; color:#fff;">
-    <h2>🎰 Championship Predictor</h2>
-    <p>Click the button and let fate decide who wins!</p>
-    <div id="prediction" style="margin:20px; font-size:1.5rem; min-height:2em;"></div>
-    <button onclick="spin()" style="padding:10px 20px; font-size:1rem;">Spin the Wheel</button>
+    <h2>🎡 Championship Decider</h2>
+    <p>Spin the wheel to see who wins!</p>
+
+    <div style="display:flex; justify-content:center; margin:20px 0; position:relative;">
+      <!-- pointer -->
+      <div style="position:absolute; top:-6px;">
+        <div style="font-size:1.4rem; line-height:1;">🔺</div>
+      </div>
+      <!-- wheel -->
+      <div id="wheel" style="
+        width:300px; height:300px; border-radius:50%; border:10px solid #fff;
+        background:conic-gradient(#e74c3c 0 120deg, #3498db 120deg 240deg, #2ecc71 240deg 360deg);
+        transition: transform 4s cubic-bezier(0.33, 1, 0.68, 1);
+      "></div>
+    </div>
+
+    <div style="margin-top:10px; font-size:0.95rem; opacity:.85">
+      Red = D Mac · Blue = Shmoo · Green = Mr Mitt
+    </div>
+
+    <button onclick="spinWheel()" style="margin-top:16px;">Spin</button>
+    <div id="winner" style="margin-top:20px; font-size:1.5rem; font-weight:bold;"></div>
   </section>
 
   <!-- SCRIPT -->
@@ -67,24 +85,17 @@
     let currentQ = 0;
 
     function renderQuestion() {
-      if (currentQ >= quizData.length) {
-        showResult();
-        return;
-      }
+      if (currentQ >= quizData.length) { showResult(); return; }
       const container = document.getElementById("quiz");
       const qObj = quizData[currentQ];
       let html = `<h3>${qObj.q}</h3>`;
       Object.entries(qObj.options).forEach(([person, text]) => {
-        html += `<button onclick="vote('${person}')" style="margin:5px; padding:10px 20px;">${text}</button>`;
+        html += `<button onclick="vote('${person}')" style="margin:5px;">${text}</button>`;
       });
       container.innerHTML = html;
     }
 
-    function vote(person) {
-      scores[person]++;
-      currentQ++;
-      renderQuestion();
-    }
+    function vote(person) { scores[person]++; currentQ++; renderQuestion(); }
 
     function showResult() {
       let winner = Object.keys(scores).reduce((a,b) => scores[a] > scores[b] ? a : b);
@@ -92,25 +103,39 @@
       document.getElementById("result").innerText = `🎉 You are most like ${winner}! 🎉`;
     }
 
-    // ---------------- SPINNER ----------------
-    const players = ["D Mac", "Shmoo", "Mr Mitt"];
-
-    function spin() {
-      const display = document.getElementById("prediction");
-      let count = 0;
-      const interval = setInterval(() => {
-        display.textContent = players[Math.floor(Math.random() * players.length)];
-        count++;
-        if (count > 15) { // slows after ~1.5s
-          clearInterval(interval);
-          const winner = players[Math.floor(Math.random() * players.length)];
-          display.textContent = `🏆 Winner: ${winner}! 🏆`;
-        }
-      }, 100);
-    }
-
     // start quiz
     renderQuestion();
+
+    // ---------------- REAL WHEEL SPINNER ----------------
+    let currentRotation = 0;
+    const players = ["D Mac", "Shmoo", "Mr Mitt"]; // order matches the 3 slices in the gradient
+
+    function spinWheel() {
+      const wheel = document.getElementById("wheel");
+      const winnerDisplay = document.getElementById("winner");
+
+      // at least 3 full spins + random degrees
+      const extraRotation = Math.floor(Math.random() * 360);
+      const spins = 1080; // 3 * 360
+      const finalRotation = currentRotation + spins + extraRotation;
+
+      wheel.style.transform = `rotate(${finalRotation}deg)`;
+      currentRotation = finalRotation;
+
+      // Decide winner after animation completes (4s)
+      setTimeout(() => {
+        // Normalize to 0-359 deg where 0deg is at the pointer (top)
+        const normalized = (finalRotation % 360 + 360) % 360;
+
+        // Each slice is 120deg in this order: 0-120 = D Mac (red), 120-240 = Shmoo (blue), 240-360 = Mr Mitt (green)
+        let winner;
+        if (normalized < 120) winner = players[0];
+        else if (normalized < 240) winner = players[1];
+        else winner = players[2];
+
+        winnerDisplay.textContent = `🏆 Winner: ${winner}! 🏆`;
+      }, 4000);
+    }
   </script>
 </body>
 </html>
