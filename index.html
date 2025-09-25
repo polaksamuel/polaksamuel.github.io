@@ -37,18 +37,13 @@
     position:relative;height:100svh;display:grid;place-items:center;text-align:center;overflow:hidden;
     background:#0b0e1a;
   }
-  .hero::before {
-  content:"";
-  position:absolute;
-  inset:0; /* full hero area */
-  /* Instead of cover or contain, explicitly scale down */
-  background:var(--hero-bg) center / 80% auto no-repeat;
-  background-color:#000; /* fill gaps */
-  filter:grayscale(10%) contrast(1.05) brightness(.9);
-}
-
-
-
+  .hero::before{
+    content:"";position:absolute;inset:0;
+    /* Show most of the image without cropping; adjust 70–80% to taste */
+    background:var(--hero-bg) center / 70% auto no-repeat;
+    background-color:#000;
+    filter:grayscale(10%) contrast(1.05) brightness(.9);
+  }
   .hero::after{
     content:"";position:absolute;inset:0;
     background:
@@ -102,6 +97,14 @@
 </style>
 </head>
 <body>
+
+<!-- Live connection status pill -->
+<div id="rt-status"
+     style="position:fixed;top:64px;left:50%;transform:translateX(-50%);
+            z-index:9999;padding:6px 10px;border:1px solid #444;border-radius:8px;
+            font:600 13px/1.2 Poppins,system-ui; background:#202635; color:#e9ecff;">
+  ⏳ Connecting…
+</div>
 
 <!-- NAV -->
 <div class="nav">
@@ -180,8 +183,9 @@
   Built with ❤️ on GitHub Pages • <a href="https://weha07boyoz.com">weha07boyoz.com</a>
 </footer>
 
+<!-- ===== Your site scripts (quiz/wheel/history + hero image) ===== -->
 <script>
-  /* ---------- Smooth anchor scroll ---------- */
+  /* Smooth anchor scroll */
   document.querySelectorAll('a[href^="#"]').forEach(a=>{
     a.addEventListener('click',e=>{
       const id=a.getAttribute('href').slice(1);
@@ -190,32 +194,14 @@
     });
   });
 
-  /* ---------- QUIZ ---------- */
+  /* Quiz */
   const quizData = [
-    {
-      q: "What's your go-to move on game day?",
-      options: {
-        "D Mac": "Crush it with energy 💪",
-        "Shmoo": "Keep it chill 😎",
-        "Mr Mitt": "Make a sneaky play 🤔"
-      }
-    },
-    {
-      q: "Favorite hangout spot?",
-      options: {
-        "D Mac": "The gym 🏋️",
-        "Shmoo": "Anywhere with snacks 🍕",
-        "Mr Mitt": "Library (secret study mode) 📚"
-      }
-    },
-    {
-      q: "Pick your hype song:",
-      options: {
-        "D Mac": "Eye of the Tiger 🎶",
-        "Shmoo": "Don’t Worry Be Happy 🎵",
-        "Mr Mitt": "Lose Yourself 🎧"
-      }
-    }
+    { q:"What's your go-to move on game day?",
+      options:{ "D Mac":"Crush it with energy 💪", "Shmoo":"Keep it chill 😎", "Mr Mitt":"Make a sneaky play 🤔" } },
+    { q:"Favorite hangout spot?",
+      options:{ "D Mac":"The gym 🏋️", "Shmoo":"Anywhere with snacks 🍕", "Mr Mitt":"Library (secret study mode) 📚" } },
+    { q:"Pick your hype song:",
+      options:{ "D Mac":"Eye of the Tiger 🎶", "Shmoo":"Don’t Worry Be Happy 🎵", "Mr Mitt":"Lose Yourself 🎧" } },
   ];
   let scores = { "D Mac":0, "Shmoo":0, "Mr Mitt":0 }, currentQ = 0;
   function renderQuestion(){
@@ -237,9 +223,9 @@
   }
   renderQuestion();
 
-  /* ---------- WHEEL ---------- */
+  /* Wheel */
   let currentRotation=0;
-  const players=["D Mac","Shmoo","Mr Mitt"]; // order matches slices
+  const players=["D Mac","Shmoo","Mr Mitt"];
   function spinWheel(){
     const wheel=document.getElementById("wheel");
     const out=document.getElementById("winner");
@@ -259,7 +245,7 @@
     },4000);
   }
 
-  /* ---------- HISTORY (static for now) ---------- */
+  /* History (static) */
   const HISTORY = [
     { season: 2017, champion: "Shmoo",   runnerUp: "D Mac",   score: "142–121" },
     { season: 2018, champion: "Mr Mitt", runnerUp: "Shmoo",   score: "128–122" },
@@ -269,29 +255,19 @@
     { season: 2022, champion: "Mr Mitt", runnerUp: "Shmoo",   score: "134–127" },
     { season: 2023, champion: "D Mac",   runnerUp: "Gunner",  score: "139–130" },
   ];
-
   function renderHistory() {
     const el = document.getElementById("history");
     if (!el) return;
-
     const totalsMap = {};
     HISTORY.forEach(r => totalsMap[r.champion] = (totalsMap[r.champion] || 0) + 1);
-    const totalsLine = Object.entries(totalsMap)
-      .sort((a,b)=>b[1]-a[1])
-      .map(([n,c]) => `${n}: ${c}`)
-      .join(" · ");
-
-    const rows = [...HISTORY]
-      .sort((a,b)=>b.season-a.season)
-      .map(r => `
-        <tr style="border-bottom:1px solid rgba(255,255,255,.06)">
-          <td style="padding:10px 8px">${r.season}</td>
-          <td style="padding:10px 8px"><b>${r.champion}</b> 🥇</td>
-          <td style="padding:10px 8px">${r.runnerUp || "-"}</td>
-          <td style="padding:10px 8px">${r.score || "-"}</td>
-        </tr>
-      `).join("");
-
+    const totalsLine = Object.entries(totalsMap).sort((a,b)=>b[1]-a[1]).map(([n,c]) => `${n}: ${c}`).join(" · ");
+    const rows = [...HISTORY].sort((a,b)=>b.season-a.season).map(r => `
+      <tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+        <td style="padding:10px 8px">${r.season}</td>
+        <td style="padding:10px 8px"><b>${r.champion}</b> 🥇</td>
+        <td style="padding:10px 8px">${r.runnerUp || "-"}</td>
+        <td style="padding:10px 8px">${r.score || "-"}</td>
+      </tr>`).join("");
     el.innerHTML = `
       <div style="overflow:auto">
         <table style="width:100%; border-collapse:collapse; text-align:left;">
@@ -306,17 +282,59 @@
           <tbody>${rows}</tbody>
         </table>
       </div>
-      <div style="margin-top:10px; font-size:.95rem; opacity:.85">
-        🏅 Total titles — ${totalsLine}
-      </div>
-    `;
+      <div style="margin-top:10px; font-size:.95rem; opacity:.85">🏅 Total titles — ${totalsLine}</div>`;
   }
   renderHistory();
 
-  /* ---------- RANDOM HERO BACKGROUND ---------- */
-  const heroImages = ["Klay_Lowlow.jpg", "Galactic_Pantz.jpg"]; // files are in repo root
+  /* Random hero background (your images in repo root) */
+  const heroImages = ["Klay_Lowlow.jpg", "Galactic_Pantz.jpg"];
   const chosen = heroImages[Math.floor(Math.random()*heroImages.length)];
   document.documentElement.style.setProperty('--hero-bg', `url("${chosen}")`);
+</script>
+
+<!-- ===== Firebase compat SDKs (works great on static GitHub Pages) ===== -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+  /* Your Firebase config (from Firebase console > Web app) */
+  const firebaseConfig = {
+    apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
+    authDomain: "weha07boyoz-game.firebaseapp.com",
+    projectId: "weha07boyoz-game",
+    storageBucket: "weha07boyoz-game.firebasestorage.app",
+    messagingSenderId: "300785635491",
+    appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
+  };
+
+  // Init + services
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db   = firebase.firestore();
+
+  // Realtime connectivity smoke test
+  (async () => {
+    const statusEl = document.getElementById('rt-status');
+    try {
+      await auth.signInAnonymously();
+      const roomRef = db.collection('rooms').doc('connectivity-test');
+      await roomRef.set({ lastPing: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+      roomRef.onSnapshot(snap => {
+        if (snap.exists) {
+          statusEl.textContent = '✅ Live connection OK';
+          statusEl.style.background = '#133d2e';
+          statusEl.style.borderColor = '#19c37d';
+        } else {
+          statusEl.textContent = '⚠️ Connected, but no doc yet…';
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = '❌ Realtime error: ' + (err.message || err);
+      statusEl.style.background = '#3d1313';
+      statusEl.style.borderColor = '#ff6b6b';
+    }
+  })();
 </script>
 </body>
 </html>
