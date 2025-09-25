@@ -338,5 +338,58 @@
     }
   })();
 </script>
+
+<!-- FIRESTORE READ CHECK (works with the rules above) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+  import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+  // Your exact config:
+  const firebaseConfig = {
+    apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
+    authDomain: "weha07boyoz-game.firebaseapp.com",
+    projectId: "weha07boyoz-game",
+    storageBucket: "weha07boyoz-game.firebasestorage.app",
+    messagingSenderId: "300785635491",
+    appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // ✅ Change only this if your doc ID isn't "game1"
+  const ROOM_ID = "game1";
+
+  // Small status chip
+  const chip = document.createElement('div');
+  chip.style.cssText="position:fixed;top:64px;left:50%;transform:translateX(-50%);padding:8px 12px;border-radius:10px;font:600 13px system-ui;color:#fff;z-index:9999;background:#444";
+  chip.textContent="Connecting to Firestore…";
+  document.body.appendChild(chip);
+
+  // One-time read + live listener
+  const ref = doc(db, "rooms", ROOM_ID);
+  try {
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      chip.style.background = "#6f5d13";
+      chip.textContent = `⚠️ Doc missing: rooms/${ROOM_ID}`;
+    } else {
+      chip.style.background = "#136f3c";
+      chip.textContent = `✅ Read OK: rooms/${ROOM_ID}`;
+    }
+
+    onSnapshot(ref,
+      s => console.log("Live data:", s.data()),
+      e => { chip.style.background="#7a2020"; chip.textContent=`❌ ${e.code}`; console.error(e); }
+    );
+  } catch (e) {
+    chip.style.background="#7a2020";
+    chip.textContent = `❌ ${e.code || e.message}`;
+    console.error(e);
+  }
+</script>
+
+
+  
 </body>
 </html>
