@@ -38,14 +38,14 @@
     background:#0b0e1a;
   }
   .hero::before{
-  content:"";
-  position:absolute;
-  inset:-10%;
-  background:url("Klay_Lowlow.jpg") center / cover no-repeat; /* default */
-  filter:grayscale(10%) contrast(1.05) brightness(.9);
-  transform:scale(1.05);
-}
-
+    content:"";
+    position:absolute;
+    inset:-10%;
+    /* fallback to Klay if JS variable isn't set; JS sets --hero-bg */
+    background:var(--hero-bg, url("Klay_Lowlow.jpg")) center / cover no-repeat;
+    filter:grayscale(10%) contrast(1.05) brightness(.9);
+    transform:scale(1.05);
+  }
   .hero::after{
     content:"";position:absolute;inset:0;
     background:
@@ -110,7 +110,6 @@
   </div>
 </div>
 
-
 <!-- HERO -->
 <header class="hero" id="top">
   <div class="hero-inner container">
@@ -160,21 +159,17 @@
       </div>
     </section>
 
-<!-- LEAGUE HISTORY -->
-<section id="history-section">
-  <div class="card" style="text-align:center">
-    <div class="section-title">
-      <span class="dot"></span><h2>🏆 Hall of Champions</h2><span class="dot"></span>
-    </div>
-    <p class="muted">All-time winners & finals results</p>
-    <div id="history"></div>
-  </div>
-</section>
+    <!-- LEAGUE HISTORY -->
+    <section id="history-section">
+      <div class="card" style="text-align:center">
+        <div class="section-title">
+          <span class="dot"></span><h2>🏆 Hall of Champions</h2><span class="dot"></span>
+        </div>
+        <p class="muted">All-time winners & finals results</p>
+        <div id="history"></div>
+      </div>
+    </section>
 
-
-
-
-    
   </div>
 </main>
 
@@ -261,75 +256,64 @@
     },4000);
   }
 
+  /* ---------- HISTORY (static for now) ---------- */
+  const HISTORY = [
+    { season: 2017, champion: "Shmoo",   runnerUp: "D Mac",   score: "142–121" },
+    { season: 2018, champion: "Mr Mitt", runnerUp: "Shmoo",   score: "128–122" },
+    { season: 2019, champion: "D Mac",   runnerUp: "Mr Mitt", score: "137–129" },
+    { season: 2020, champion: "Shmoo",   runnerUp: "Gunner",  score: "131–118" },
+    { season: 2021, champion: "Gunner",  runnerUp: "D Mac",   score: "125–123" },
+    { season: 2022, champion: "Mr Mitt", runnerUp: "Shmoo",   score: "134–127" },
+    { season: 2023, champion: "D Mac",   runnerUp: "Gunner",  score: "139–130" },
+  ];
 
+  function renderHistory() {
+    const el = document.getElementById("history");
+    if (!el) return;
 
-  // ====== HALL OF CHAMPIONS (edit this list anytime) ======
-const HISTORY = [
-  { season: 2017, champion: "Shmoo",   runnerUp: "D Mac",   score: "142–121" },
-  { season: 2018, champion: "Mr Mitt", runnerUp: "Shmoo",   score: "128–122" },
-  { season: 2019, champion: "D Mac",   runnerUp: "Mr Mitt", score: "137–129" },
-  { season: 2020, champion: "Shmoo",   runnerUp: "Gunner",  score: "131–118" },
-  { season: 2021, champion: "Gunner",  runnerUp: "D Mac",   score: "125–123" },
-  { season: 2022, champion: "Mr Mitt", runnerUp: "Shmoo",   score: "134–127" },
-  { season: 2023, champion: "D Mac",   runnerUp: "Gunner",  score: "139–130" },
-];
+    const totalsMap = {};
+    HISTORY.forEach(r => totalsMap[r.champion] = (totalsMap[r.champion] || 0) + 1);
+    const totalsLine = Object.entries(totalsMap)
+      .sort((a,b)=>b[1]-a[1])
+      .map(([n,c]) => `${n}: ${c}`)
+      .join(" · ");
 
-function renderHistory() {
-  const el = document.getElementById("history");
-  if (!el) return;
+    const rows = [...HISTORY]
+      .sort((a,b)=>b.season-a.season)
+      .map(r => `
+        <tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+          <td style="padding:10px 8px">${r.season}</td>
+          <td style="padding:10px 8px"><b>${r.champion}</b> 🥇</td>
+          <td style="padding:10px 8px">${r.runnerUp || "-"}</td>
+          <td style="padding:10px 8px">${r.score || "-"}</td>
+        </tr>
+      `).join("");
 
-  // Totals by champ
-  const totalsMap = {};
-  HISTORY.forEach(r => totalsMap[r.champion] = (totalsMap[r.champion] || 0) + 1);
-  const totalsLine = Object.entries(totalsMap)
-    .sort((a,b)=>b[1]-a[1])
-    .map(([n,c]) => `${n}: ${c}`)
-    .join(" · ");
+    el.innerHTML = `
+      <div style="overflow:auto">
+        <table style="width:100%; border-collapse:collapse; text-align:left;">
+          <thead>
+            <tr>
+              <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Season</th>
+              <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Champion</th>
+              <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Runner-up</th>
+              <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Final</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px; font-size:.95rem; opacity:.85">
+        🏅 Total titles — ${totalsLine}
+      </div>
+    `;
+  }
+  renderHistory();
 
-  // Rows (newest first)
-  const rows = [...HISTORY]
-    .sort((a,b)=>b.season-a.season)
-    .map(r => `
-      <tr style="border-bottom:1px solid rgba(255,255,255,.06)">
-        <td style="padding:10px 8px">${r.season}</td>
-        <td style="padding:10px 8px"><b>${r.champion}</b> 🥇</td>
-        <td style="padding:10px 8px">${r.runnerUp || "-"}</td>
-        <td style="padding:10px 8px">${r.score || "-"}</td>
-      </tr>
-    `).join("");
-
-  el.innerHTML = `
-    <div style="overflow:auto">
-      <table style="width:100%; border-collapse:collapse; text-align:left;">
-        <thead>
-          <tr>
-            <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Season</th>
-            <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Champion</th>
-            <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Runner-up</th>
-            <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Final</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    </div>
-    <div style="margin-top:10px; font-size:.95rem; opacity:.85">
-      🏅 Total titles — ${totalsLine}
-    </div>
-  `;
-}
-
-// call after everything else has loaded/executed
-renderHistory();
-
-
-// Random hero background (repo root images)
-const heroImages = ["Klay_Lowlow.jpg", "Galactic_Pantz.jpg"];
-const chosen = heroImages[Math.floor(Math.random()*heroImages.length)];
-document.documentElement.style.setProperty('--hero-bg', `url("${chosen}")`);
-
-
-
-  
+  /* ---------- RANDOM HERO BACKGROUND ---------- */
+  const heroImages = ["Klay_Lowlow.jpg", "Galactic_Pantz.jpg"]; // files are in repo root
+  const chosen = heroImages[Math.floor(Math.random()*heroImages.length)];
+  document.documentElement.style.setProperty('--hero-bg', `url("${chosen}")`);
 </script>
 </body>
 </html>
