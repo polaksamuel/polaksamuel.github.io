@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WeHa 07 Boyoz - Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: Poppins, sans-serif;
+      background: #0b0e1a;
+      color: #e9ecff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+    .card {
+      background: #131735;
+      border: 1px solid #2b3170;
+      border-radius: 20px;
+      padding: 26px;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 22px 50px rgba(0,0,0,.28);
+    }
+    img {
+      max-width: 100%;
+      border-radius: 14px;
+    }
+    input {
+      width: 90%;
+      padding: 10px;
+      margin-top: 14px;
+      border-radius: 10px;
+      border: none;
+    }
+    button {
+      margin-top: 14px;
+      padding: 12px 18px;
+      border-radius: 14px;
+      border: none;
+      background: #38d3ff;
+      color: #001022;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>📝 Guess Who?</h1>
+  <div id="game-card" class="card">
+    <h2 id="question">Loading...</h2>
+    <img id="game-image" src="" alt="mystery player">
+    <input id="answer" placeholder="Type your guess here">
+    <button onclick="submitAnswer()">Submit</button>
+    <div id="feedback"></div>
+  </div>
+
+  <script type="module">
+    // Import the SDK
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+    // Your Firebase config (same as in index.html)
+    const firebaseConfig = {
+      apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
+      authDomain: "weha07boyoz-game.firebaseapp.com",
+      projectId: "weha07boyoz-game",
+      storageBucket: "weha07boyoz-game.firebasestorage.app",
+      messagingSenderId: "300785635491",
+      appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
+    };
+
+    // Init
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // Grab elements
+    const qEl = document.getElementById('question');
+    const imgEl = document.getElementById('game-image');
+    const feedback = document.getElementById('feedback');
+    const answerInput = document.getElementById('answer');
+
+    // Live subscribe to game1 doc
+    const docRef = doc(db, "rooms", "game1");
+    onSnapshot(docRef, (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        qEl.textContent = data.question || 'No question';
+        imgEl.src = data.currentImage || '';
+        feedback.textContent = '';
+        answerInput.value = '';
+      }
+    });
+
+    // Very simple client-side answer check
+    function submitAnswer() {
+      const guess = answerInput.value.trim().toLowerCase();
+      // Hard-coded answer from the doc for now
+      const correctAnswer = "klay thompson";
+      if (guess === correctAnswer) {
+        feedback.textContent = "✅ Correct!";
+      } else if (guess && correctAnswer.includes(guess)) {
+        feedback.textContent = "⚠️ Close!";
+      } else {
+        feedback.textContent = "❌ Nope!";
+      }
+    }
+    window.submitAnswer = submitAnswer;
+  </script>
+</body>
+</html>
