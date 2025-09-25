@@ -38,11 +38,14 @@
     background:#0b0e1a;
   }
   .hero::before{
-  content:"";position:absolute;inset:-10%;
-  background:var(--hero-bg) center / cover no-repeat;
+  content:"";
+  position:absolute;
+  inset:-10%;
+  background:url("Klay_Lowlow.jpg") center / cover no-repeat; /* default */
   filter:grayscale(10%) contrast(1.05) brightness(.9);
   transform:scale(1.05);
-  }
+}
+
   .hero::after{
     content:"";position:absolute;inset:0;
     background:
