@@ -38,14 +38,14 @@
     background:#0b0e1a;
   }
   .hero::before{
-    content:"";
-    position:absolute;
-    inset:-10%;
-    /* fallback to Klay if JS variable isn't set; JS sets --hero-bg */
-    background:var(--hero-bg, url("Klay_Lowlow.jpg")) center / cover no-repeat;
-    filter:grayscale(10%) contrast(1.05) brightness(.9);
-    transform:scale(1.05);
-  }
+  content:"";
+  position:absolute;
+  inset:0; /* was -10% */
+  background:var(--hero-bg, url("Klay_Lowlow.jpg")) center / cover no-repeat;
+  filter:grayscale(10%) contrast(1.05) brightness(.9);
+  transform:none; /* was scale(1.05) */
+}
+
   .hero::after{
     content:"";position:absolute;inset:0;
     background:
