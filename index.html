@@ -38,11 +38,10 @@
     background:#0b0e1a;
   }
   .hero::before{
-    content:"";position:absolute;inset:-10%;
-    background:url("https://images.unsplash.com/photo-1517649763962-0c623066013b?q=80&w=2000&auto=format&fit=crop")
-      center / cover no-repeat;
-    filter:grayscale(10%) contrast(1.05) brightness(.9);
-    transform:scale(1.05);
+  content:"";position:absolute;inset:-10%;
+  background:var(--hero-bg) center / cover no-repeat;
+  filter:grayscale(10%) contrast(1.05) brightness(.9);
+  transform:scale(1.05);
   }
   .hero::after{
     content:"";position:absolute;inset:0;
