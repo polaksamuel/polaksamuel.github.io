@@ -40,11 +40,13 @@
   .hero::before {
   content:"";
   position:absolute;
-  inset:-10%;
-  background:var(--hero-bg) center / contain no-repeat; /* changed from cover */
+  inset:0; /* full hero area */
+  /* Instead of cover or contain, explicitly scale down */
+  background:var(--hero-bg) center / 80% auto no-repeat;
+  background-color:#000; /* fill gaps */
   filter:grayscale(10%) contrast(1.05) brightness(.9);
-  transform:none; /* remove previous scale(1.05) */
 }
+
 
 
   .hero::after{
