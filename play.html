@@ -6,15 +6,14 @@
   <title>WeHa 07 Boyoz - Game</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --bg:#0b0e1a; --ink:#e9ecff; --card:#131735; --rim:#2b3170; --brand:#38d3ff;
-    }
+    :root{ --bg:#0b0e1a; --ink:#e9ecff; --card:#131735; --rim:#2b3170; --brand:#38d3ff; }
     body{font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink);
          display:flex;flex-direction:column;align-items:center;padding:20px}
     .card{background:var(--card);border:1px solid var(--rim);border-radius:20px;
           padding:26px;max-width:640px;width:100%;text-align:center;
           box-shadow:0 22px 50px rgba(0,0,0,.28)}
-    img{width:100%;max-height:360px;object-fit:cover;border-radius:14px;background:#0a0d20}
+    /* canvas shows the cropped face from the full page */
+    canvas{width:100%;max-height:360px;object-fit:contain;border-radius:14px;background:#0a0d20}
     input{width:90%;padding:10px;margin-top:14px;border-radius:10px;border:none}
     button{margin-top:14px;padding:12px 18px;border-radius:14px;border:none;
            background:var(--brand);color:#001022;font-weight:700;cursor:pointer}
@@ -32,7 +31,10 @@
 
   <div id="game-card" class="card">
     <h2 id="question">Loading...</h2>
-    <img id="game-image" src="" alt="mystery player">
+
+    <!-- Cropped face drawn into canvas -->
+    <canvas id="faceCanvas" width="600" height="350" aria-label="mystery player"></canvas>
+
     <input id="answer" placeholder="Type your guess here">
     <button onclick="submitAnswer()">Submit</button>
     <div id="feedback" class="feedback"></div>
@@ -67,9 +69,8 @@
 
     // ---- Firebase SDKs ----
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-    import {
-      getFirestore, doc, onSnapshot, setDoc, collection
-    } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+    import { getFirestore, doc, onSnapshot, setDoc, collection } 
+      from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
@@ -85,19 +86,52 @@
 
     // ---- Elements ----
     const qEl = document.getElementById('question');
-    const imgEl = document.getElementById('game-image');
     const feedback = document.getElementById('feedback');
     const answerInput = document.getElementById('answer');
     const leaderRows = document.getElementById('leaderRows');
     const playerCountEl = document.getElementById('playerCount');
 
-    // ---- Subscribe to the shared room for image/question ----
+    // Canvas for cropping
+    const canvas = document.getElementById('faceCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function drawCrop(img, crop){
+      // crop uses percentages (0..1) of the full page dimensions
+      const sx = Math.round(img.naturalWidth  * (crop.xPct ?? 0));
+      const sy = Math.round(img.naturalHeight * (crop.yPct ?? 0));
+      const sw = Math.round(img.naturalWidth  * (crop.wPct ?? 1));
+      const sh = Math.round(img.naturalHeight * (crop.hPct ?? 1));
+
+      // size the canvas to the crop aspect
+      const targetW = 600;
+      const targetH = Math.max(160, Math.round(targetW * (sh / Math.max(1, sw))));
+      canvas.width = targetW;
+      canvas.height = targetH;
+
+      ctx.clearRect(0,0,targetW,targetH);
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
+    }
+
+    // ---- Subscribe to the shared room (reads page image + crop) ----
     const roomRef = doc(db, "rooms", "game1");
     onSnapshot(roomRef, (snap) => {
       if (!snap.exists()) return;
       const data = snap.data();
       qEl.textContent = data.question || "Who is this?";
-      imgEl.src = (data.currentImage || "").trim();
+
+      // Prefer pageImage; fall back to currentImage if still present
+      const pageUrl = (data.pageImage || data.currentImage || "").trim();
+      if (!pageUrl) { feedback.textContent = "No image set."; return; }
+
+      const crop = data.crop || { xPct:0, yPct:0, wPct:1, hPct:1 };
+
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.onload  = () => drawCrop(img, crop);
+      img.onerror = () => { feedback.textContent = "Image failed to load. Check URL."; };
+      img.src = pageUrl;
+
       feedback.textContent = '';
       answerInput.value = '';
     });
@@ -119,7 +153,6 @@
 
     // ---- Live Leaderboard (super simple, no ordering) ----
     const playersCol = collection(db, "rooms", "game1", "Players");
-
     onSnapshot(playersCol, (snap) => {
       const rows = [];
       let count = 0;
@@ -128,18 +161,10 @@
         const name = p.name || "(anon)";
         const last = p.lastGuess || "—";
         const score = (typeof p.score === "number") ? p.score : 0;
-
-        rows.push(`
-          <tr>
-            <td>${name}</td>
-            <td>${last}</td>
-            <td>${score}</td>
-          </tr>
-        `);
+        rows.push(`<tr><td>${name}</td><td>${last}</td><td>${score}</td></tr>`);
         count++;
       });
-
-      playerCountEl.textContent = `${count} ${count === 1 ? 'player' : 'players'}`;
+      playerCountEl.textContent = `${count} ${count===1?'player':'players'}`;
       leaderRows.innerHTML = rows.length ? rows.join("") :
         `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
     });
