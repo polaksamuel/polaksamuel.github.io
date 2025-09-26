@@ -59,7 +59,7 @@
   </div>
 
   <script type="module">
-    // ---- Simple player identity (no auth yet) ----
+    // ---- Simple player identity ----
     let playerId = localStorage.getItem('playerId');
     if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
     let playerName = localStorage.getItem('playerName');
@@ -68,8 +68,7 @@
     // ---- Firebase SDKs ----
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
-      getFirestore, doc, onSnapshot, setDoc,
-      collection, query, orderBy
+      getFirestore, doc, onSnapshot, setDoc, collection
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -111,7 +110,6 @@
       await setDoc(playerRef, {
         name: playerName,
         lastGuess: guess,
-        // score stays as-is if already there; default to 0 if not present yet
         score: 0,
         timestamp: Date.now()
       }, { merge: true });
@@ -119,36 +117,32 @@
     }
     window.submitAnswer = submitAnswer;
 
-   // ---- Live Leaderboard (super simple, no ordering) ----
-import { collection, onSnapshot } 
-  from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+    // ---- Live Leaderboard (super simple, no ordering) ----
+    const playersCol = collection(db, "rooms", "game1", "Players");
 
-const playersCol = collection(db, "rooms", "game1", "Players");
+    onSnapshot(playersCol, (snap) => {
+      const rows = [];
+      let count = 0;
+      snap.forEach(docSnap => {
+        const p = docSnap.data() || {};
+        const name = p.name || "(anon)";
+        const last = p.lastGuess || "—";
+        const score = (typeof p.score === "number") ? p.score : 0;
 
-onSnapshot(playersCol, (snap) => {
-  const rows = [];
-  let count = 0;
-  snap.forEach(docSnap => {
-    const p = docSnap.data() || {};
-    const name = p.name || "(anon)";
-    const last = p.lastGuess || "—";
-    const score = (typeof p.score === "number") ? p.score : 0;
+        rows.push(`
+          <tr>
+            <td>${name}</td>
+            <td>${last}</td>
+            <td>${score}</td>
+          </tr>
+        `);
+        count++;
+      });
 
-    rows.push(`
-      <tr>
-        <td>${name}</td>
-        <td>${last}</td>
-        <td>${score}</td>
-      </tr>
-    `);
-    count++;
-  });
-
-  playerCountEl.textContent = `${count} ${count === 1 ? 'player' : 'players'}`;
-  leaderRows.innerHTML = rows.length ? rows.join("") :
-    `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
-});
-
+      playerCountEl.textContent = `${count} ${count === 1 ? 'player' : 'players'}`;
+      leaderRows.innerHTML = rows.length ? rows.join("") :
+        `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
+    });
   </script>
 </body>
 </html>
