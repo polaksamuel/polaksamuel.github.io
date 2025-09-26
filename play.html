@@ -1,81 +1,77 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>WeHa 07 Boyoz - Game</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: Poppins, sans-serif;
-      background: #0b0e1a;
-      color: #e9ecff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 20px;
+    :root{
+      --bg:#0b0e1a; --ink:#e9ecff; --card:#131735; --rim:#2b3170; --brand:#38d3ff;
     }
-    .card {
-      background: #131735;
-      border: 1px solid #2b3170;
-      border-radius: 20px;
-      padding: 26px;
-      max-width: 500px;
-      text-align: center;
-      box-shadow: 0 22px 50px rgba(0,0,0,.28);
-    }
-    img {
-      max-width: 100%;
-      border-radius: 14px;
-    }
-    input {
-      width: 90%;
-      padding: 10px;
-      margin-top: 14px;
-      border-radius: 10px;
-      border: none;
-    }
-    button {
-      margin-top: 14px;
-      padding: 12px 18px;
-      border-radius: 14px;
-      border: none;
-      background: #38d3ff;
-      color: #001022;
-      font-weight: 700;
-      cursor: pointer;
-    }
+    body{font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink);
+         display:flex;flex-direction:column;align-items:center;padding:20px}
+    .card{background:var(--card);border:1px solid var(--rim);border-radius:20px;
+          padding:26px;max-width:640px;width:100%;text-align:center;
+          box-shadow:0 22px 50px rgba(0,0,0,.28)}
+    img{width:100%;max-height:360px;object-fit:cover;border-radius:14px;background:#0a0d20}
+    input{width:90%;padding:10px;margin-top:14px;border-radius:10px;border:none}
+    button{margin-top:14px;padding:12px 18px;border-radius:14px;border:none;
+           background:var(--brand);color:#001022;font-weight:700;cursor:pointer}
+    .feedback{margin-top:10px;font-weight:600}
+    .section{margin-top:20px}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
+    th{border-bottom:1px solid var(--rim);font-weight:700}
+    .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);
+         border:1px solid rgba(255,255,255,.12);font-size:.8rem}
   </style>
 </head>
 <body>
   <h1>📝 Guess Who?</h1>
+
   <div id="game-card" class="card">
     <h2 id="question">Loading...</h2>
     <img id="game-image" src="" alt="mystery player">
     <input id="answer" placeholder="Type your guess here">
     <button onclick="submitAnswer()">Submit</button>
-    <div id="feedback"></div>
+    <div id="feedback" class="feedback"></div>
+
+    <!-- Live Leaderboard -->
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <h3 style="margin:0">🏆 Leaderboard</h3>
+        <span id="playerCount" class="tag">0 players</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:38%">Player</th>
+            <th style="width:32%">Last guess</th>
+            <th style="width:30%">Score</th>
+          </tr>
+        </thead>
+        <tbody id="leaderRows">
+          <tr><td colspan="3" style="opacity:.8">Waiting for players…</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
 
   <script type="module">
-    // --- Generate a unique playerId and name ---
+    // ---- Simple player identity (no auth yet) ----
     let playerId = localStorage.getItem('playerId');
-    if (!playerId) {
-      playerId = crypto.randomUUID();
-      localStorage.setItem('playerId', playerId);
-    }
-
+    if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
     let playerName = localStorage.getItem('playerName');
-    if (!playerName) {
-      playerName = prompt("Enter your name:");
-      localStorage.setItem('playerName', playerName);
-    }
+    if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
 
-    // --- Firebase SDK imports ---
+    // ---- Firebase SDKs ----
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+    import {
+      getFirestore, doc, onSnapshot, setDoc,
+      collection, query, orderBy
+    } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-    // --- Your Firebase config ---
     const firebaseConfig = {
       apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
       authDomain: "weha07boyoz-game.firebaseapp.com",
@@ -85,46 +81,69 @@
       appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
     };
 
-    // --- Init Firebase ---
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db  = getFirestore(app);
 
-    // --- Grab elements ---
+    // ---- Elements ----
     const qEl = document.getElementById('question');
     const imgEl = document.getElementById('game-image');
     const feedback = document.getElementById('feedback');
     const answerInput = document.getElementById('answer');
+    const leaderRows = document.getElementById('leaderRows');
+    const playerCountEl = document.getElementById('playerCount');
 
-    // --- Subscribe live to the game1 doc ---
-    const docRef = doc(db, "rooms", "game1");
-    onSnapshot(docRef, (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        qEl.textContent = data.question || 'No question';
-        imgEl.src = data.currentImage || '';
-        feedback.textContent = '';
-        answerInput.value = '';
-      }
+    // ---- Subscribe to the shared room for image/question ----
+    const roomRef = doc(db, "rooms", "game1");
+    onSnapshot(roomRef, (snap) => {
+      if (!snap.exists()) return;
+      const data = snap.data();
+      qEl.textContent = data.question || "Who is this?";
+      imgEl.src = (data.currentImage || "").trim();
+      feedback.textContent = '';
+      answerInput.value = '';
     });
 
-    // --- Submit the player's guess to Firestore ---
+    // ---- Submit a guess (writes to Players subcollection) ----
     async function submitAnswer() {
       const guess = answerInput.value.trim();
       if (!guess) return;
-
-      // Reference to this player's doc under rooms/game1/Players/{playerId}
       const playerRef = doc(db, "rooms", "game1", "Players", playerId);
-
-      // Write or update player doc
       await setDoc(playerRef, {
         name: playerName,
         lastGuess: guess,
+        // score stays as-is if already there; default to 0 if not present yet
+        score: 0,
         timestamp: Date.now()
       }, { merge: true });
-
       feedback.textContent = "✅ Guess submitted!";
     }
     window.submitAnswer = submitAnswer;
+
+    // ---- Live Leaderboard (reads Players in real time) ----
+    // Order by score desc, then name asc. If `score` missing, Firestore treats it as null; we normalize in the UI.
+    const playersCol = collection(db, "rooms", "game1", "Players");
+    const playersQ = query(playersCol, orderBy("score", "desc"), orderBy("name"));
+    onSnapshot(playersQ, (snap) => {
+      const rows = [];
+      let count = 0;
+      snap.forEach(docSnap => {
+        const p = docSnap.data() || {};
+        const name = (p.name || "(anon)").toString();
+        const last = (p.lastGuess || "—").toString();
+        const score = (typeof p.score === "number") ? p.score : 0;
+        rows.push(`
+          <tr>
+            <td>${name}</td>
+            <td>${last}</td>
+            <td>${score}</td>
+          </tr>
+        `);
+        count++;
+      });
+      playerCountEl.textContent = `${count} ${count===1?'player':'players'}`;
+      leaderRows.innerHTML = rows.length ? rows.join("") :
+        `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
+    });
   </script>
 </body>
 </html>
