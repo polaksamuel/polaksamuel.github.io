@@ -58,11 +58,24 @@
   </div>
 
   <script type="module">
-    // Import the SDK
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-    import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+    // --- Generate a unique playerId and name ---
+    let playerId = localStorage.getItem('playerId');
+    if (!playerId) {
+      playerId = crypto.randomUUID();
+      localStorage.setItem('playerId', playerId);
+    }
 
-    // Your Firebase config (same as in index.html)
+    let playerName = localStorage.getItem('playerName');
+    if (!playerName) {
+      playerName = prompt("Enter your name:");
+      localStorage.setItem('playerName', playerName);
+    }
+
+    // --- Firebase SDK imports ---
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+    // --- Your Firebase config ---
     const firebaseConfig = {
       apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
       authDomain: "weha07boyoz-game.firebaseapp.com",
@@ -72,17 +85,17 @@
       appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
     };
 
-    // Init
+    // --- Init Firebase ---
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // Grab elements
+    // --- Grab elements ---
     const qEl = document.getElementById('question');
     const imgEl = document.getElementById('game-image');
     const feedback = document.getElementById('feedback');
     const answerInput = document.getElementById('answer');
 
-    // Live subscribe to game1 doc
+    // --- Subscribe live to the game1 doc ---
     const docRef = doc(db, "rooms", "game1");
     onSnapshot(docRef, (snap) => {
       if (snap.exists()) {
@@ -94,18 +107,22 @@
       }
     });
 
-    // Very simple client-side answer check
-    function submitAnswer() {
-      const guess = answerInput.value.trim().toLowerCase();
-      // Hard-coded answer from the doc for now
-      const correctAnswer = "klay thompson";
-      if (guess === correctAnswer) {
-        feedback.textContent = "✅ Correct!";
-      } else if (guess && correctAnswer.includes(guess)) {
-        feedback.textContent = "⚠️ Close!";
-      } else {
-        feedback.textContent = "❌ Nope!";
-      }
+    // --- Submit the player's guess to Firestore ---
+    async function submitAnswer() {
+      const guess = answerInput.value.trim();
+      if (!guess) return;
+
+      // Reference to this player's doc under rooms/game1/Players/{playerId}
+      const playerRef = doc(db, "rooms", "game1", "Players", playerId);
+
+      // Write or update player doc
+      await setDoc(playerRef, {
+        name: playerName,
+        lastGuess: guess,
+        timestamp: Date.now()
+      }, { merge: true });
+
+      feedback.textContent = "✅ Guess submitted!";
     }
     window.submitAnswer = submitAnswer;
   </script>
