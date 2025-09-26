@@ -10,41 +10,45 @@
     body{font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink);
          display:flex;flex-direction:column;align-items:center;padding:20px}
     .card{background:var(--card);border:1px solid var(--rim);border-radius:20px;
-          padding:26px;max-width:680px;width:100%;text-align:center;
+          padding:26px;max-width:900px;width:100%;text-align:center;
           box-shadow:0 22px 50px rgba(0,0,0,.28)}
-    canvas{width:100%;max-height:420px;object-fit:contain;border-radius:14px;background:#0a0d20}
+    h1{margin:0 0 16px}
+    .stage{background:#0c0f22;border-radius:14px;padding:18px}
+    canvas{width:100%; max-width:820px; height:auto; border-radius:12px; background:#0a0d20}
     input{width:90%;padding:10px;margin-top:14px;border-radius:10px;border:none}
     button{margin-top:14px;padding:12px 18px;border-radius:14px;border:none;
            background:var(--brand);color:#001022;font-weight:700;cursor:pointer}
     .feedback{margin-top:10px;font-weight:600}
-    .section{margin-top:20px}
+    .section{margin-top:22px}
     table{width:100%;border-collapse:collapse;margin-top:10px}
     th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.08);text-align:left}
     th{border-bottom:1px solid var(--rim);font-weight:700}
     .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);
          border:1px solid rgba(255,255,255,.12);font-size:.8rem}
-
-    /* Dev tuner styles */
-    .dev{margin-top:12px;padding:10px;border:1px dashed var(--rim);border-radius:12px;text-align:left}
-    .row{display:flex;gap:10px;align-items:center;margin:6px 0}
-    .row input[type=range]{flex:1}
-    code{background:rgba(255,255,255,.06);padding:6px 8px;border-radius:8px}
+    /* Dev panel */
+    #devBox{display:none;margin-top:16px;background:#222;padding:14px;border-radius:12px}
+    #devBox label{display:block;margin:8px 0 4px}
+    #devBox input[type="range"]{width:100%}
+    #jsonOut{background:#111;color:#c9f0ff;padding:10px;border-radius:8px;overflow:auto}
   </style>
 </head>
 <body>
   <h1>📝 Guess Who?</h1>
 
-  <div id="game-card" class="card">
-    <h2 id="question">Loading...</h2>
+  <div class="card">
+    <h2 id="question">Who is this player?</h2>
 
-    <!-- Cropped face drawn into canvas -->
-    <canvas id="faceCanvas" width="600" height="350" aria-label="mystery player"></canvas>
+    <!-- CROPPED IMAGE RENDER TARGET -->
+    <div class="stage">
+      <canvas id="canvas" width="820" height="520"></canvas>
+    </div>
 
+    <!-- Answer -->
     <input id="answer" placeholder="Type your guess here">
-    <button onclick="submitAnswer()">Submit</button>
+    <button id="submitBtn">Submit</button>
     <div id="feedback" class="feedback"></div>
 
-    <!-- Live Leaderboard -->
+    <!-- Leaderboard -->
     <div class="section">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <h3 style="margin:0">🏆 Leaderboard</h3>
@@ -59,35 +63,29 @@
           </tr>
         </thead>
         <tbody id="leaderRows">
-          <tr><td colspan="3" style="opacity:.8">Waiting for players…</td></tr>
+          <tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>
         </tbody>
       </table>
     </div>
 
-    <!-- Dev crop tuner (hidden unless ?dev=1) -->
-    <div id="devBox" class="dev" style="display:none">
-      <div><strong>Dev crop controls</strong> (open page with <code>?dev=1</code>)</div>
-      <div class="row">xPct <input id="xPct" type="range" min="0" max="1" step="0.005"><span id="xPctV"></span></div>
-      <div class="row">yPct <input id="yPct" type="range" min="0" max="1" step="0.005"><span id="yPctV"></span></div>
-      <div class="row">wPct <input id="wPct" type="range" min="0.02" max="1" step="0.005"><span id="wPctV"></span></div>
-      <div class="row">hPct <input id="hPct" type="range" min="0.02" max="1" step="0.005"><span id="hPctV"></span></div>
-      <div style="margin-top:8px">Copy into Firestore <code>crop</code> map:
-        <div><code id="cropJson"></code></div>
-      </div>
+    <!-- DEV CONTROLS (shown only with ?dev=1) -->
+    <div id="devBox">
+      <h3 style="margin:0 0 10px">🔧 Dev crop controls (open page with <code>?dev=1</code>)</h3>
+      <label>xPct <input id="xPct" type="range" min="0" max="1" step="0.01"></label>
+      <label>yPct <input id="yPct" type="range" min="0" max="1" step="0.01"></label>
+      <label>wPct <input id="wPct" type="range" min="0.05" max="1" step="0.01"></label>
+      <label>hPct <input id="hPct" type="range" min="0.05" max="1" step="0.01"></label>
+      <div style="margin-top:8px">Copy into Firestore <code>crop</code> map:</div>
+      <pre id="jsonOut"></pre>
     </div>
   </div>
 
   <script type="module">
-    // ---- Simple player identity ----
-    let playerId = localStorage.getItem('playerId');
-    if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
-    let playerName = localStorage.getItem('playerName');
-    if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
-
-    // ---- Firebase SDKs ----
+    // ---- Firebase ----
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
-    import { getFirestore, doc, onSnapshot, setDoc, collection } 
-      from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+    import {
+      getFirestore, doc, onSnapshot, setDoc, collection, onSnapshot as subColSnapshot
+    } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
@@ -97,183 +95,146 @@
       messagingSenderId: "300785635491",
       appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
     };
-
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
     // ---- Elements ----
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
     const qEl = document.getElementById('question');
     const feedback = document.getElementById('feedback');
     const answerInput = document.getElementById('answer');
     const leaderRows = document.getElementById('leaderRows');
     const playerCountEl = document.getElementById('playerCount');
 
-    // Canvas for cropping
-    const canvas = document.getElementById('faceCanvas');
-    const ctx = canvas.getContext('2d');
-
-    function drawCrop(img, crop){
-      // crop uses percentages (0..1) of the full page dimensions
-      const sx = Math.round(img.naturalWidth  * (crop.xPct ?? 0));
-      const sy = Math.round(img.naturalHeight * (crop.yPct ?? 0));
-      const sw = Math.round(img.naturalWidth  * (crop.wPct ?? 1));
-      const sh = Math.round(img.naturalHeight * (crop.hPct ?? 1));
-
-      // size the canvas to the crop aspect
-      const targetW = 600;
-      const targetH = Math.max(160, Math.round(targetW * (sh / Math.max(1, sw))));
-      canvas.width = targetW;
-      canvas.height = targetH;
-
-      ctx.clearRect(0,0,targetW,targetH);
-      ctx.imageSmoothingQuality = 'high';
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
-    }
-
-    // ---- Dev tuner wiring ----
-    const devMode = new URLSearchParams(location.search).get('dev') === '1';
+    // Dev controls
+    const params = new URLSearchParams(window.location.search);
+    const dev = params.has('dev');
     const devBox = document.getElementById('devBox');
-    const xPctI = document.getElementById('xPct');
-    const yPctI = document.getElementById('yPct');
-    const wPctI = document.getElementById('wPct');
-    const hPctI = document.getElementById('hPct');
-    const xPctV = document.getElementById('xPctV');
-    const yPctV = document.getElementById('yPctV');
-    const wPctV = document.getElementById('wPctV');
-    const hPctV = document.getElementById('hPctV');
-    const cropJson = document.getElementById('cropJson');
+    const xSlider = document.getElementById('xPct');
+    const ySlider = document.getElementById('yPct');
+    const wSlider = document.getElementById('wPct');
+    const hSlider = document.getElementById('hPct');
+    const jsonOut = document.getElementById('jsonOut');
+    if (dev) devBox.style.display = 'block';
 
-    function showDev(crop){
-      if (!devMode) return;
-      devBox.style.display = 'block';
-      xPctI.value = crop.xPct ?? 0;  yPctI.value = crop.yPct ?? 0;
-      wPctI.value = crop.wPct ?? 1;  hPctI.value = crop.hPct ?? 1;
-      syncLabels();
-    }
-    function syncLabels(){
-      xPctV.textContent = Number(xPctI.value).toFixed(3);
-      yPctV.textContent = Number(yPctI.value).toFixed(3);
-      wPctV.textContent = Number(wPctI.value).toFixed(3);
-      hPctV.textContent = Number(hPctI.value).toFixed(3);
-      cropJson.textContent = `{ "xPct": ${xPctV.textContent}, "yPct": ${yPctV.textContent}, "wPct": ${wPctV.textContent}, "hPct": ${hPctV.textContent} }`;
-    }
-    function hookSliders(img){
-      if (!devMode) return;
-      const onSlide = () => {
-        const c = { xPct:+xPctI.value, yPct:+yPctI.value, wPct:+wPctI.value, hPct:+hPctI.value };
-        syncLabels();
-        drawCrop(img, c);   // redraw live (no Firestore writes)
-      };
-      xPctI.oninput = yPctI.oninput = wPctI.oninput = hPctI.oninput = onSlide;
-    }
+    // Simple identity
+    let playerId = localStorage.getItem('playerId'); if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
+    let playerName = localStorage.getItem('playerName'); if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
 
-    // ---- Subscribe to the shared room (reads page image + crop) ----
     const roomRef = doc(db, "rooms", "game1");
-    onSnapshot(roomRef, (snap) => {
-      if (!snap.exists()) return;
-      const data = snap.data();
-      qEl.textContent = data.question || "Who is this?";
 
-      // Prefer pageImage; fall back to currentImage if still present
-      const pageUrl = (data.pageImage || data.currentImage || "").trim();
-      if (!pageUrl) { feedback.textContent = "No image set."; return; }
+    let dataCache = null;
+    let imgCache = null;
 
-      const crop = data.crop || { xPct:0, yPct:0, wPct:1, hPct:1 };
+    // Draw cropped image onto canvas
+    function draw() {
+      if (!dataCache || !imgCache) return;
+      const img = imgCache;
+      const crop = dataCache.crop || {xPct:0, yPct:0, wPct:1, hPct:1};
 
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload  = () => { drawCrop(img, crop); showDev(crop); hookSliders(img); };
-      img.onerror = () => { feedback.textContent = "Image failed to load. Check URL."; };
-      img.src = pageUrl;
+      const sx = Math.max(0, Math.min(img.naturalWidth,  Math.floor(crop.xPct * img.naturalWidth)));
+      const sy = Math.max(0, Math.min(img.naturalHeight, Math.floor(crop.yPct * img.naturalHeight)));
+      const sw = Math.max(1, Math.floor(crop.wPct * img.naturalWidth));
+      const sh = Math.max(1, Math.floor(crop.hPct * img.naturalHeight));
 
-      feedback.textContent = '';
-      answerInput.value = '';
+      // Clear and draw
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    }
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    function resolveImageUrl(s) {
+      if (!s) return "";
+      if (s.startsWith("http")) return s;
+      // serve from same repo root
+      return "/" + s.replace(/^\/+/,'');
+    }
+
+    function updateDevUI() {
+      if (!dev || !dataCache || !dataCache.crop) return;
+      xSlider.value = dataCache.crop.xPct ?? 0;
+      ySlider.value = dataCache.crop.yPct ?? 0;
+      wSlider.value = dataCache.crop.wPct ?? 1;
+      hSlider.value = dataCache.crop.hPct ?? 1;
+      jsonOut.textContent = JSON.stringify({
+        xPct: Number(xSlider.value),
+        yPct: Number(ySlider.value),
+        wPct: Number(wSlider.value),
+        hPct: Number(hSlider.value),
+      }, null, 2);
+    }
+
+    // React to dev slider changes (preview only)
+    [xSlider,ySlider,wSlider,hSlider].forEach(sl => {
+      sl?.addEventListener('input', () => {
+        if (!dataCache) return;
+        dataCache.crop = {
+          xPct: Number(xSlider.value),
+          yPct: Number(ySlider.value),
+          wPct: Number(wSlider.value),
+          hPct: Number(hSlider.value),
+        };
+        jsonOut.textContent = JSON.stringify(dataCache.crop, null, 2);
+        draw();
+      });
     });
 
-    // ---- Submit a guess (writes to Players subcollection) ----
-    async function submitAnswer() {
-      const guess = answerInput.value.trim();
+    // Subscribe to room
+    onSnapshot(roomRef, async (snap) => {
+      if (!snap.exists()) return;
+      const d = snap.data();
+      qEl.textContent = d.question || "Who is this player?";
+
+      // Expect pageImage + crop in Firestore
+      const url = resolveImageUrl(d.pageImage || d.currentImage || "");
+      if (!url) return;
+
+      try {
+        const img = await loadImage(url);
+        dataCache = {
+          crop: d.crop || {xPct:0, yPct:0, wPct:1, hPct:1}
+        };
+        imgCache = img;
+        updateDevUI();
+        draw();
+      } catch (e) {
+        console.error("Image load failed", e);
+      }
+    });
+
+    // Submit guess
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const guess = (answerInput.value || "").trim();
       if (!guess) return;
       const playerRef = doc(db, "rooms", "game1", "Players", playerId);
-      await setDoc(playerRef, {
-        name: playerName,
-        lastGuess: guess,
-        score: 0,
-        timestamp: Date.now()
-      }, { merge: true });
+      await setDoc(playerRef, { name: playerName, lastGuess: guess, score: 0, ts: Date.now() }, { merge: true });
       feedback.textContent = "✅ Guess submitted!";
-    }
-    window.submitAnswer = submitAnswer;
+      setTimeout(()=> feedback.textContent="", 1500);
+    });
 
-    // ---- Live Leaderboard (super simple, no ordering) ----
-    const playersCol = collection(db, "rooms", "game1", "Players");
-    onSnapshot(playersCol, (snap) => {
+    // Live leaderboard
+    subColSnapshot(collection(db, "rooms", "game1", "Players"), (snap) => {
       const rows = [];
       let count = 0;
       snap.forEach(docSnap => {
         const p = docSnap.data() || {};
-        const name = p.name || "(anon)";
-        const last = p.lastGuess || "—";
-        const score = (typeof p.score === "number") ? p.score : 0;
-        rows.push(`<tr><td>${name}</td><td>${last}</td><td>${score}</td></tr>`);
+        rows.push(`<tr><td>${p.name||"(anon)"}</td><td>${p.lastGuess||"—"}</td><td>${typeof p.score==="number"?p.score:0}</td></tr>`);
         count++;
       });
-      playerCountEl.textContent = `${count} ${count===1?'player':'players'}`;
-      leaderRows.innerHTML = rows.length ? rows.join("") :
-        `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
+      playerCountEl.textContent = `${count} ${count===1?"player":"players"}`;
+      leaderRows.innerHTML = rows.length ? rows.join("") : `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
     });
   </script>
-
-<!-- DEV CONTROLS - Only shows with ?dev=1 -->
-<div id="devControls" style="display:none;margin-top:20px;background:#222;padding:15px;border-radius:10px;color:#fff;max-width:640px;width:100%;">
-  <h3 style="margin-top:0">Dev crop controls</h3>
-  <label>X % <input type="range" id="xPct" min="0" max="1" step="0.01"></label><br>
-  <label>Y % <input type="range" id="yPct" min="0" max="1" step="0.01"></label><br>
-  <label>Width % <input type="range" id="wPct" min="0.1" max="1" step="0.01"></label><br>
-  <label>Height % <input type="range" id="hPct" min="0.1" max="1" step="0.01"></label><br>
-  <pre id="cropJson"></pre>
-</div>
-
-<script>
-  // Show dev controls if ?dev=1
-  if (window.location.search.includes('dev=1')) {
-    const devBox = document.getElementById('devControls');
-    devBox.style.display = 'block';
-
-    const xRange = document.getElementById('xPct');
-    const yRange = document.getElementById('yPct');
-    const wRange = document.getElementById('wPct');
-    const hRange = document.getElementById('hPct');
-    const cropPre = document.getElementById('cropJson');
-    const imgEl = document.getElementById('game-image');
-
-    function updateCrop() {
-      const x = parseFloat(xRange.value);
-      const y = parseFloat(yRange.value);
-      const w = parseFloat(wRange.value);
-      const h = parseFloat(hRange.value);
-
-      // Show the JSON
-      cropPre.textContent = JSON.stringify({xPct:x,yPct:y,wPct:w,hPct:h}, null, 2);
-
-      // Apply CSS clip via object-position & size to simulate crop
-      imgEl.style.objectPosition = `${x*100}% ${y*100}%`;
-      imgEl.style.objectFit = 'cover';
-      imgEl.style.width = (w*100) + '%';
-      imgEl.style.height = (h*100) + '%';
-    }
-
-    [xRange,yRange,wRange,hRange].forEach(slider=>{
-      slider.addEventListener('input', updateCrop);
-    });
-
-    // set defaults
-    xRange.value=0.5; yRange.value=0.5; wRange.value=1; hRange.value=1;
-    updateCrop();
-  }
-</script>
-
-
-  
 </body>
 </html>
