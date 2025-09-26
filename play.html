@@ -223,5 +223,57 @@
         `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
     });
   </script>
+
+<!-- DEV CONTROLS - Only shows with ?dev=1 -->
+<div id="devControls" style="display:none;margin-top:20px;background:#222;padding:15px;border-radius:10px;color:#fff;max-width:640px;width:100%;">
+  <h3 style="margin-top:0">Dev crop controls</h3>
+  <label>X % <input type="range" id="xPct" min="0" max="1" step="0.01"></label><br>
+  <label>Y % <input type="range" id="yPct" min="0" max="1" step="0.01"></label><br>
+  <label>Width % <input type="range" id="wPct" min="0.1" max="1" step="0.01"></label><br>
+  <label>Height % <input type="range" id="hPct" min="0.1" max="1" step="0.01"></label><br>
+  <pre id="cropJson"></pre>
+</div>
+
+<script>
+  // Show dev controls if ?dev=1
+  if (window.location.search.includes('dev=1')) {
+    const devBox = document.getElementById('devControls');
+    devBox.style.display = 'block';
+
+    const xRange = document.getElementById('xPct');
+    const yRange = document.getElementById('yPct');
+    const wRange = document.getElementById('wPct');
+    const hRange = document.getElementById('hPct');
+    const cropPre = document.getElementById('cropJson');
+    const imgEl = document.getElementById('game-image');
+
+    function updateCrop() {
+      const x = parseFloat(xRange.value);
+      const y = parseFloat(yRange.value);
+      const w = parseFloat(wRange.value);
+      const h = parseFloat(hRange.value);
+
+      // Show the JSON
+      cropPre.textContent = JSON.stringify({xPct:x,yPct:y,wPct:w,hPct:h}, null, 2);
+
+      // Apply CSS clip via object-position & size to simulate crop
+      imgEl.style.objectPosition = `${x*100}% ${y*100}%`;
+      imgEl.style.objectFit = 'cover';
+      imgEl.style.width = (w*100) + '%';
+      imgEl.style.height = (h*100) + '%';
+    }
+
+    [xRange,yRange,wRange,hRange].forEach(slider=>{
+      slider.addEventListener('input', updateCrop);
+    });
+
+    // set defaults
+    xRange.value=0.5; yRange.value=0.5; wRange.value=1; hRange.value=1;
+    updateCrop();
+  }
+</script>
+
+
+  
 </body>
 </html>
