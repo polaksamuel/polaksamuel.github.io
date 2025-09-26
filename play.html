@@ -10,10 +10,9 @@
     body{font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink);
          display:flex;flex-direction:column;align-items:center;padding:20px}
     .card{background:var(--card);border:1px solid var(--rim);border-radius:20px;
-          padding:26px;max-width:640px;width:100%;text-align:center;
+          padding:26px;max-width:680px;width:100%;text-align:center;
           box-shadow:0 22px 50px rgba(0,0,0,.28)}
-    /* canvas shows the cropped face from the full page */
-    canvas{width:100%;max-height:360px;object-fit:contain;border-radius:14px;background:#0a0d20}
+    canvas{width:100%;max-height:420px;object-fit:contain;border-radius:14px;background:#0a0d20}
     input{width:90%;padding:10px;margin-top:14px;border-radius:10px;border:none}
     button{margin-top:14px;padding:12px 18px;border-radius:14px;border:none;
            background:var(--brand);color:#001022;font-weight:700;cursor:pointer}
@@ -24,6 +23,12 @@
     th{border-bottom:1px solid var(--rim);font-weight:700}
     .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);
          border:1px solid rgba(255,255,255,.12);font-size:.8rem}
+
+    /* Dev tuner styles */
+    .dev{margin-top:12px;padding:10px;border:1px dashed var(--rim);border-radius:12px;text-align:left}
+    .row{display:flex;gap:10px;align-items:center;margin:6px 0}
+    .row input[type=range]{flex:1}
+    code{background:rgba(255,255,255,.06);padding:6px 8px;border-radius:8px}
   </style>
 </head>
 <body>
@@ -57,6 +62,18 @@
           <tr><td colspan="3" style="opacity:.8">Waiting for players…</td></tr>
         </tbody>
       </table>
+    </div>
+
+    <!-- Dev crop tuner (hidden unless ?dev=1) -->
+    <div id="devBox" class="dev" style="display:none">
+      <div><strong>Dev crop controls</strong> (open page with <code>?dev=1</code>)</div>
+      <div class="row">xPct <input id="xPct" type="range" min="0" max="1" step="0.005"><span id="xPctV"></span></div>
+      <div class="row">yPct <input id="yPct" type="range" min="0" max="1" step="0.005"><span id="yPctV"></span></div>
+      <div class="row">wPct <input id="wPct" type="range" min="0.02" max="1" step="0.005"><span id="wPctV"></span></div>
+      <div class="row">hPct <input id="hPct" type="range" min="0.02" max="1" step="0.005"><span id="hPctV"></span></div>
+      <div style="margin-top:8px">Copy into Firestore <code>crop</code> map:
+        <div><code id="cropJson"></code></div>
+      </div>
     </div>
   </div>
 
@@ -113,6 +130,43 @@
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, targetW, targetH);
     }
 
+    // ---- Dev tuner wiring ----
+    const devMode = new URLSearchParams(location.search).get('dev') === '1';
+    const devBox = document.getElementById('devBox');
+    const xPctI = document.getElementById('xPct');
+    const yPctI = document.getElementById('yPct');
+    const wPctI = document.getElementById('wPct');
+    const hPctI = document.getElementById('hPct');
+    const xPctV = document.getElementById('xPctV');
+    const yPctV = document.getElementById('yPctV');
+    const wPctV = document.getElementById('wPctV');
+    const hPctV = document.getElementById('hPctV');
+    const cropJson = document.getElementById('cropJson');
+
+    function showDev(crop){
+      if (!devMode) return;
+      devBox.style.display = 'block';
+      xPctI.value = crop.xPct ?? 0;  yPctI.value = crop.yPct ?? 0;
+      wPctI.value = crop.wPct ?? 1;  hPctI.value = crop.hPct ?? 1;
+      syncLabels();
+    }
+    function syncLabels(){
+      xPctV.textContent = Number(xPctI.value).toFixed(3);
+      yPctV.textContent = Number(yPctI.value).toFixed(3);
+      wPctV.textContent = Number(wPctI.value).toFixed(3);
+      hPctV.textContent = Number(hPctI.value).toFixed(3);
+      cropJson.textContent = `{ "xPct": ${xPctV.textContent}, "yPct": ${yPctV.textContent}, "wPct": ${wPctV.textContent}, "hPct": ${hPctV.textContent} }`;
+    }
+    function hookSliders(img){
+      if (!devMode) return;
+      const onSlide = () => {
+        const c = { xPct:+xPctI.value, yPct:+yPctI.value, wPct:+wPctI.value, hPct:+hPctI.value };
+        syncLabels();
+        drawCrop(img, c);   // redraw live (no Firestore writes)
+      };
+      xPctI.oninput = yPctI.oninput = wPctI.oninput = hPctI.oninput = onSlide;
+    }
+
     // ---- Subscribe to the shared room (reads page image + crop) ----
     const roomRef = doc(db, "rooms", "game1");
     onSnapshot(roomRef, (snap) => {
@@ -128,7 +182,7 @@
 
       const img = new Image();
       img.crossOrigin = "anonymous";
-      img.onload  = () => drawCrop(img, crop);
+      img.onload  = () => { drawCrop(img, crop); showDev(crop); hookSliders(img); };
       img.onerror = () => { feedback.textContent = "Image failed to load. Check URL."; };
       img.src = pageUrl;
 
