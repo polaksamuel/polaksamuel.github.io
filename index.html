@@ -289,46 +289,7 @@
 </script>
 
 
-<script>
-  /* Your Firebase config (from Firebase console > Web app) */
-  const firebaseConfig = {
-    apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
-    authDomain: "weha07boyoz-game.firebaseapp.com",
-    projectId: "weha07boyoz-game",
-    storageBucket: "weha07boyoz-game.firebasestorage.app",
-    messagingSenderId: "300785635491",
-    appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
-  };
 
-  // Init + services
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db   = firebase.firestore();
-
-  // Realtime connectivity smoke test
-  (async () => {
-    const statusEl = document.getElementById('rt-status');
-    try {
-      await auth.signInAnonymously();
-      const roomRef = db.collection('rooms').doc('connectivity-test');
-      await roomRef.set({ lastPing: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-      roomRef.onSnapshot(snap => {
-        if (snap.exists) {
-          statusEl.textContent = '✅ Live connection OK';
-          statusEl.style.background = '#133d2e';
-          statusEl.style.borderColor = '#19c37d';
-        } else {
-          statusEl.textContent = '⚠️ Connected, but no doc yet…';
-        }
-      });
-    } catch (err) {
-      console.error(err);
-      statusEl.textContent = '❌ Realtime error: ' + (err.message || err);
-      statusEl.style.background = '#3d1313';
-      statusEl.style.borderColor = '#ff6b6b';
-    }
-  })();
-</script>
 
 <!-- Firebase core + Firestore SDK -->
 <script type="module">
