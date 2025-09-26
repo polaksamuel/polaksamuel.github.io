@@ -119,31 +119,36 @@
     }
     window.submitAnswer = submitAnswer;
 
-    // ---- Live Leaderboard (reads Players in real time) ----
-    // Order by score desc, then name asc. If `score` missing, Firestore treats it as null; we normalize in the UI.
-    const playersCol = collection(db, "rooms", "game1", "Players");
-    const playersQ = query(playersCol, orderBy("score", "desc"), orderBy("name"));
-    onSnapshot(playersQ, (snap) => {
-      const rows = [];
-      let count = 0;
-      snap.forEach(docSnap => {
-        const p = docSnap.data() || {};
-        const name = (p.name || "(anon)").toString();
-        const last = (p.lastGuess || "—").toString();
-        const score = (typeof p.score === "number") ? p.score : 0;
-        rows.push(`
-          <tr>
-            <td>${name}</td>
-            <td>${last}</td>
-            <td>${score}</td>
-          </tr>
-        `);
-        count++;
-      });
-      playerCountEl.textContent = `${count} ${count===1?'player':'players'}`;
-      leaderRows.innerHTML = rows.length ? rows.join("") :
-        `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
-    });
+   // ---- Live Leaderboard (super simple, no ordering) ----
+import { collection, onSnapshot } 
+  from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+const playersCol = collection(db, "rooms", "game1", "Players");
+
+onSnapshot(playersCol, (snap) => {
+  const rows = [];
+  let count = 0;
+  snap.forEach(docSnap => {
+    const p = docSnap.data() || {};
+    const name = p.name || "(anon)";
+    const last = p.lastGuess || "—";
+    const score = (typeof p.score === "number") ? p.score : 0;
+
+    rows.push(`
+      <tr>
+        <td>${name}</td>
+        <td>${last}</td>
+        <td>${score}</td>
+      </tr>
+    `);
+    count++;
+  });
+
+  playerCountEl.textContent = `${count} ${count === 1 ? 'player' : 'players'}`;
+  leaderRows.innerHTML = rows.length ? rows.join("") :
+    `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
+});
+
   </script>
 </body>
 </html>
