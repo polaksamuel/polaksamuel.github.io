@@ -127,85 +127,90 @@
     let dataCache = null;
     let imgCache = null;
 
-    // Draw cropped image onto canvas
+    // --------- helpers ----------
+    function normalizeCrop(c) {
+      const x = Number(c?.xPct);
+      const y = Number(c?.yPct);
+      const w = Number(c?.wPct);
+      const h = Number(c?.hPct);
+      return {
+        xPct: Number.isFinite(x) ? x : 0,
+        yPct: Number.isFinite(y) ? y : 0,
+        wPct: (Number.isFinite(w) && w > 0 && w <= 1) ? w : 1,
+        hPct: (Number.isFinite(h) && h > 0 && h <= 1) ? h : 1,
+      };
+    }
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();        // same-origin; no crossOrigin
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Image failed: " + url));
+        img.src = url;                  // keep simple; no query-string needed
+      });
+    }
+
+    function resolveImageUrl(s) {
+      if (!s) return "";
+      if (s.startsWith("http")) return s;      // allow full URLs too
+      return "/" + s.replace(/^\/+/, "");      // "page01.png" -> "/page01.png"
+    }
+
+    // --------- draw ----------
     function draw() {
       if (!dataCache || !imgCache) return;
       const img = imgCache;
-      const crop = dataCache.crop || {xPct:0, yPct:0, wPct:1, hPct:1};
+      const crop = normalizeCrop(dataCache.crop);
 
       const sx = Math.max(0, Math.min(img.naturalWidth,  Math.floor(crop.xPct * img.naturalWidth)));
       const sy = Math.max(0, Math.min(img.naturalHeight, Math.floor(crop.yPct * img.naturalHeight)));
       const sw = Math.max(1, Math.floor(crop.wPct * img.naturalWidth));
       const sh = Math.max(1, Math.floor(crop.hPct * img.naturalHeight));
 
-      // Clear and draw
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     }
 
-function loadImage(url) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();        // same-origin: do NOT set crossOrigin
-    img.onload = () => resolve(img);
-    img.onerror = (e) => reject(new Error("Image failed: " + url));
-    img.src = url;                  // ← no cache-buster query string
-  });
-}
-
-function resolveImageUrl(s) {
-  if (!s) return "";
-  if (s.startsWith("http")) return s;           // allow full URLs too
-  return "/" + s.replace(/^\/+/, "");           // "page01.png" -> "/page01.png"
-}
-
-
-
+    // --------- dev UI ----------
     function updateDevUI() {
       if (!dev || !dataCache || !dataCache.crop) return;
-      xSlider.value = dataCache.crop.xPct ?? 0;
-      ySlider.value = dataCache.crop.yPct ?? 0;
-      wSlider.value = dataCache.crop.wPct ?? 1;
-      hSlider.value = dataCache.crop.hPct ?? 1;
-      jsonOut.textContent = JSON.stringify({
-        xPct: Number(xSlider.value),
-        yPct: Number(ySlider.value),
-        wPct: Number(wSlider.value),
-        hPct: Number(hSlider.value),
-      }, null, 2);
+      const c = normalizeCrop(dataCache.crop);
+      xSlider.value = c.xPct;
+      ySlider.value = c.yPct;
+      wSlider.value = c.wPct;
+      hSlider.value = c.hPct;
+      jsonOut.textContent = JSON.stringify(c, null, 2);
     }
 
-    // React to dev slider changes (preview only)
-    [xSlider,ySlider,wSlider,hSlider].forEach(sl => {
+    [xSlider, ySlider, wSlider, hSlider].forEach(sl => {
       sl?.addEventListener('input', () => {
         if (!dataCache) return;
-        dataCache.crop = {
-          xPct: Number(xSlider.value),
-          yPct: Number(ySlider.value),
-          wPct: Number(wSlider.value),
-          hPct: Number(hSlider.value),
-        };
-        jsonOut.textContent = JSON.stringify(dataCache.crop, null, 2);
+        const next = normalizeCrop({
+          xPct: parseFloat(xSlider.value),
+          yPct: parseFloat(ySlider.value),
+          wPct: parseFloat(wSlider.value),
+          hPct: parseFloat(hSlider.value),
+        });
+        dataCache.crop = next;
+        jsonOut.textContent = JSON.stringify(next, null, 2);
         draw();
       });
     });
 
-    // Subscribe to room
+    // --------- Firestore live subscribe ----------
     onSnapshot(roomRef, async (snap) => {
       if (!snap.exists()) return;
       const d = snap.data();
       qEl.textContent = d.question || "Who is this player?";
 
-      // Expect pageImage + crop in Firestore
       const url = resolveImageUrl(d.pageImage || d.currentImage || "");
       if (!url) return;
 
       try {
         const img = await loadImage(url);
-        dataCache = {
-          crop: d.crop || {xPct:0, yPct:0, wPct:1, hPct:1}
-        };
         imgCache = img;
+        dataCache = { crop: normalizeCrop(d.crop) };
         updateDevUI();
         draw();
       } catch (e) {
@@ -213,7 +218,7 @@ function resolveImageUrl(s) {
       }
     });
 
-    // Submit guess
+    // --------- Submit guess ----------
     document.getElementById('submitBtn').addEventListener('click', async () => {
       const guess = (answerInput.value || "").trim();
       if (!guess) return;
@@ -223,7 +228,7 @@ function resolveImageUrl(s) {
       setTimeout(()=> feedback.textContent="", 1500);
     });
 
-    // Live leaderboard
+    // --------- Live leaderboard ----------
     subColSnapshot(collection(db, "rooms", "game1", "Players"), (snap) => {
       const rows = [];
       let count = 0;
