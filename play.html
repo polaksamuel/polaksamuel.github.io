@@ -25,6 +25,8 @@
     th{border-bottom:1px solid var(--rim);font-weight:700}
     .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);
          border:1px solid rgba(255,255,255,.12);font-size:.8rem}
+
+    /* Dev panel (visible only with ?dev=1) */
     #devBox{display:none;margin-top:16px;background:#222;padding:14px;border-radius:12px}
     #devBox label{display:block;margin:8px 0 4px}
     #devBox input[type="range"]{width:100%}
@@ -67,9 +69,9 @@
       </table>
     </div>
 
-    <!-- DEV CONTROLS -->
+    <!-- DEV CONTROLS (shown only with ?dev=1) -->
     <div id="devBox">
-      <h3 style="margin:0 0 10px">🔧 Dev crop controls (?dev=1)</h3>
+      <h3 style="margin:0 0 10px">🔧 Dev crop controls (open page with <code>?dev=1</code>)</h3>
       <label>xPct <input id="xPct" type="range" min="0" max="1" step="0.01"></label>
       <label>yPct <input id="yPct" type="range" min="0" max="1" step="0.01"></label>
       <label>wPct <input id="wPct" type="range" min="0.05" max="1" step="0.01"></label>
@@ -80,6 +82,7 @@
   </div>
 
   <script type="module">
+    /* ---------------- Firebase ---------------- */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
       getFirestore, doc, onSnapshot, setDoc, getDoc,
@@ -97,7 +100,7 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    /* Elements */
+    /* ---------------- Elements ---------------- */
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const qEl = document.getElementById('question');
@@ -106,28 +109,28 @@
     const leaderRows = document.getElementById('leaderRows');
     const playerCountEl = document.getElementById('playerCount');
 
-    /* Dev panel */
+    // Dev controls
     const params = new URLSearchParams(window.location.search);
     const dev = params.has('dev');
-    if (dev) document.getElementById('devBox').style.display = 'block';
+    const devBox = document.getElementById('devBox');
     const xSlider = document.getElementById('xPct');
     const ySlider = document.getElementById('yPct');
     const wSlider = document.getElementById('wPct');
     const hSlider = document.getElementById('hPct');
     const jsonOut = document.getElementById('jsonOut');
+    if (dev) devBox.style.display = 'block';
 
-    /* Player identity */
-    let playerId = localStorage.getItem('playerId');
-    if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
-    let playerName = localStorage.getItem('playerName');
-    if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
+    // Simple identity
+    let playerId = localStorage.getItem('playerId'); if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
+    let playerName = localStorage.getItem('playerName'); if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
 
     const roomRef = doc(db, "rooms", "game1");
 
     let dataCache = null;
     let imgCache = null;
+    let devPreviewCrop = null;   // live preview crop when using sliders
 
-    /* Helpers */
+    /* ---------------- Helpers ---------------- */
     function normalizeCrop(c) {
       const x = parseFloat(c?.xPct);
       const y = parseFloat(c?.yPct);
@@ -140,50 +143,75 @@
         hPct: Number.isFinite(h) && h > 0 ? h : 1,
       };
     }
+
     function resolveImageUrl(s) {
       if (!s) return "";
-      if (s.startsWith("http")) return s;
-      return "/" + s.replace(/^\/+/, "");
+      if (s.startsWith("http")) return s;      // allow full URLs too
+      return "/" + s.replace(/^\/+/, "");      // "page01.png" -> "/page01.png"
     }
+
     function loadImage(url) {
       return new Promise((resolve, reject) => {
-        const img = new Image();
+        const img = new Image();               // same-origin: do NOT set crossOrigin
         img.onload = () => resolve(img);
         img.onerror = () => reject(new Error("Image failed: " + url));
-        img.src = url;
+        img.src = url;                         // no cache-buster needed
       });
     }
+
+    /* ---------------- Drawing ---------------- */
     function draw() {
       if (!dataCache || !imgCache) return;
       const img = imgCache;
-      let { xPct, yPct, wPct, hPct } = normalizeCrop(dataCache.crop || {});
+
+      // Prefer the dev slider preview crop if present
+      const rawCrop = (dev && devPreviewCrop) ? devPreviewCrop : (dataCache.crop || {});
+      let { xPct, yPct, wPct, hPct } = normalizeCrop(rawCrop);
       wPct = Math.min(wPct, 1 - xPct);
       hPct = Math.min(hPct, 1 - yPct);
+
       const W = img.naturalWidth, H = img.naturalHeight;
       const sx = Math.round(xPct * W);
       const sy = Math.round(yPct * H);
       const sw = Math.max(1, Math.round(wPct * W));
       const sh = Math.max(1, Math.round(hPct * H));
+
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     }
+
+    /* ---------------- Dev sliders (preview only) ---------------- */
     function hydrateSlidersOnceFrom(crop) {
       if (!dev || !crop) return;
       xSlider.value = crop.xPct ?? 0;
       ySlider.value = crop.yPct ?? 0;
       wSlider.value = crop.wPct ?? 1;
       hSlider.value = crop.hPct ?? 1;
-      jsonOut.textContent = JSON.stringify({
+      devPreviewCrop = {    // initialize preview from the current crop
         xPct: Number(xSlider.value),
         yPct: Number(ySlider.value),
         wPct: Number(wSlider.value),
         hPct: Number(hSlider.value),
-      }, null, 2);
+      };
+      jsonOut.textContent = JSON.stringify(devPreviewCrop, null, 2);
     }
 
-    /* Fuzzy answer checking */
-    function norm(s) {
+    [xSlider, ySlider, wSlider, hSlider].forEach(sl => {
+      sl?.addEventListener('input', () => {
+        devPreviewCrop = {
+          xPct: Number(xSlider.value),
+          yPct: Number(ySlider.value),
+          wPct: Number(wSlider.value),
+          hPct: Number(hSlider.value),
+        };
+        jsonOut.textContent = JSON.stringify(devPreviewCrop, null, 2);
+        draw();
+      });
+    });
+
+    /* ---------------- Fuzzy answer checking ---------------- */
+    function _norm(s) {
       return (s || "").toLowerCase().trim().replace(/\s+/g, " ");
     }
     function levenshtein(a, b) {
@@ -206,39 +234,62 @@
       return m[b.length][a.length];
     }
     function isCorrect(target, guess) {
-      const t = norm(target);
-      const g = norm(guess);
+      const t = _norm(target);
+      const g = _norm(guess);
       if (!t || !g) return false;
       if (t === g) return true;
-      const dist = levenshtein(t, g);
-      return dist <= 2; // allow small typos
+      return levenshtein(t, g) <= 2;  // small typos allowed
     }
 
-    /* Subscribe to room */
-    onSnapshot(roomRef, async (snap) => {
+    /* ---------------- Live room + round subscription ---------------- */
+    const roomUnsub = onSnapshot(roomRef, async (snap) => {
       if (!snap.exists()) return;
-      const d = snap.data();
-      qEl.textContent = d.question || "Who is this?";
-      const url = resolveImageUrl(d.pageImage || "");
-      if (!url) return;
-      try {
-        const img = await loadImage(url);
-        dataCache = { crop: normalizeCrop(d.crop), answer: d.answer };
-        imgCache = img;
-        hydrateSlidersOnceFrom(dataCache.crop);
-        draw();
-      } catch (e) { console.error("Image load failed:", e); }
+      const room = snap.data();
+
+      qEl.textContent = room.question || "Who is this?";
+
+      // If a currentRoundId exists, subscribe to that round doc; else fallback to room-level fields
+      if (room.currentRoundId) {
+        const roundRef = doc(db, "rooms", "game1", "rounds", room.currentRoundId);
+        onSnapshot(roundRef, async (rSnap) => {
+          if (!rSnap.exists()) return;
+          const rd = rSnap.data();
+          const url = resolveImageUrl(rd.pageImage || "");
+          if (!url) return;
+          try {
+            const img = await loadImage(url);
+            dataCache = { crop: normalizeCrop(rd.crop), answer: rd.answer };
+            imgCache = img;
+            hydrateSlidersOnceFrom(dataCache.crop);
+            draw();
+          } catch (e) { console.error("Image load failed:", e); }
+        });
+      } else {
+        // Legacy single-image mode (pageImage/crop/answer at room level)
+        const url = resolveImageUrl(room.pageImage || "");
+        if (!url) return;
+        try {
+          const img = await loadImage(url);
+          dataCache = { crop: normalizeCrop(room.crop), answer: room.answer };
+          imgCache = img;
+          hydrateSlidersOnceFrom(dataCache.crop);
+          draw();
+        } catch (e) { console.error("Image load failed:", e); }
+      }
     });
 
-    /* Submit guess with scoring */
+    /* ---------------- Guess submit ---------------- */
     document.getElementById('submitBtn').addEventListener('click', async () => {
       const guess = (answerInput.value || "").trim();
       if (!guess || !dataCache) return;
+
       const correct = isCorrect(dataCache.answer, guess);
       const points = correct ? 1 : 0;
+
       const playerRef = doc(db, "rooms", "game1", "Players", playerId);
       const pSnap = await getDoc(playerRef);
       const prev = (pSnap.exists() && typeof pSnap.data().score === "number") ? pSnap.data().score : 0;
+
       await setDoc(playerRef, {
         name: playerName,
         lastGuess: guess,
@@ -246,11 +297,12 @@
         score: prev + points,
         ts: Date.now()
       }, { merge: true });
+
       feedback.textContent = correct ? "✅ Correct!" : "❌ Not quite.";
       setTimeout(()=> feedback.textContent="", 1500);
     });
 
-    /* Leaderboard */
+    /* ---------------- Live leaderboard ---------------- */
     subColSnapshot(collection(db, "rooms", "game1", "Players"), (snap) => {
       const rows = [];
       let count = 0;
