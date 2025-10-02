@@ -46,7 +46,10 @@
 
     <!-- Answer -->
     <input id="answer" placeholder="Type your guess here">
-    <button id="submitBtn">Submit</button>
+    <div>
+      <button id="submitBtn">Submit</button>
+      <button id="nextBtn" style="display:none; margin-left:8px">Next (Random)</button>
+    </div>
     <div id="feedback" class="feedback"></div>
 
     <!-- Leaderboard -->
@@ -85,7 +88,7 @@
     /* ---------------- Firebase ---------------- */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
-      getFirestore, doc, onSnapshot, setDoc, getDoc,
+      getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, updateDoc,
       collection, onSnapshot as subColSnapshot
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
@@ -108,10 +111,12 @@
     const answerInput = document.getElementById('answer');
     const leaderRows = document.getElementById('leaderRows');
     const playerCountEl = document.getElementById('playerCount');
+    const nextBtn = document.getElementById('nextBtn');
 
-    // Dev controls
+    // Dev & Admin controls
     const params = new URLSearchParams(window.location.search);
     const dev = params.has('dev');
+    const isAdmin = params.has('admin');
     const devBox = document.getElementById('devBox');
     const xSlider = document.getElementById('xPct');
     const ySlider = document.getElementById('yPct');
@@ -119,16 +124,20 @@
     const hSlider = document.getElementById('hPct');
     const jsonOut = document.getElementById('jsonOut');
     if (dev) devBox.style.display = 'block';
+    if (isAdmin) nextBtn.style.display = 'inline-block';
 
     // Simple identity
-    let playerId = localStorage.getItem('playerId'); if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
-    let playerName = localStorage.getItem('playerName'); if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
+    let playerId = localStorage.getItem('playerId');
+    if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
+    let playerName = localStorage.getItem('playerName');
+    if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
 
     const roomRef = doc(db, "rooms", "game1");
 
     let dataCache = null;
     let imgCache = null;
     let devPreviewCrop = null;   // live preview crop when using sliders
+    let unsubscribeRound = null;
 
     /* ---------------- Helpers ---------------- */
     function normalizeCrop(c) {
@@ -146,16 +155,16 @@
 
     function resolveImageUrl(s) {
       if (!s) return "";
-      if (s.startsWith("http")) return s;      // allow full URLs too
-      return "/" + s.replace(/^\/+/, "");      // "page01.png" -> "/page01.png"
+      if (/^https?:\/\//i.test(s)) return s; // allow absolute URLs
+      return s.replace(/^\/+/, "");          // keep relative path (e.g., "page01.png")
     }
 
     function loadImage(url) {
       return new Promise((resolve, reject) => {
-        const img = new Image();               // same-origin: do NOT set crossOrigin
+        const img = new Image();               // same-origin
         img.onload = () => resolve(img);
         img.onerror = () => reject(new Error("Image failed: " + url));
-        img.src = url;                         // no cache-buster needed
+        img.src = url;
       });
     }
 
@@ -241,45 +250,79 @@
       return levenshtein(t, g) <= 2;  // small typos allowed
     }
 
-    /* ---------------- Live room + round subscription ---------------- */
-    const roomUnsub = onSnapshot(roomRef, async (snap) => {
-      if (!snap.exists()) return;
-      const room = snap.data();
+    /* ---------------- Room + Round loading (robust) ---------------- */
+    async function showRoundDoc(roundId) {
+      if (!roundId) return false;
 
+      const rRef = doc(db, "rooms", "game1", "rounds", roundId);
+      const snap = await getDoc(rRef);
+      if (!snap.exists()) {
+        console.error("[GW] Round doc missing:", roundId);
+        return false;
+      }
+
+      const d = snap.data();
+      const url = resolveImageUrl(d.pageImage || "");
+      console.log("[GW] showRoundDoc →", { roundId, url, crop: d.crop, answer: d.answer });
+
+      if (!url) return false;
+
+      // Load image once and draw immediately
+      const img = await loadImage(url);
+      dataCache = { crop: normalizeCrop(d.crop), answer: d.answer };
+      imgCache = img;
+      hydrateSlidersOnceFrom(dataCache.crop);
+      draw();
+
+      // Subscribe for future updates
+      if (unsubscribeRound) unsubscribeRound();
+      unsubscribeRound = onSnapshot(rRef, async (s2) => {
+        if (!s2.exists()) return;
+        const d2 = s2.data();
+        const u2 = resolveImageUrl(d2.pageImage || "");
+        console.log("[GW] round onSnapshot →", { roundId, url: u2, crop: d2.crop, answer: d2.answer });
+        try {
+          const img2 = await loadImage(u2);
+          dataCache = { crop: normalizeCrop(d2.crop), answer: d2.answer };
+          imgCache = img2;
+          draw(); // don't re-hydrate sliders here so your manual preview stays
+        } catch (e) {
+          console.error("[GW] Image failed while watching round:", e);
+        }
+      });
+
+      return true;
+    }
+
+    onSnapshot(roomRef, async (roomSnap) => {
+      if (!roomSnap.exists()) return;
+      const room = roomSnap.data();
       qEl.textContent = room.question || "Who is this?";
 
-      // If a currentRoundId exists, subscribe to that round doc; else fallback to room-level fields
+      // 1) Try rounds-based flow
       if (room.currentRoundId) {
-        const roundRef = doc(db, "rooms", "game1", "rounds", room.currentRoundId);
-        onSnapshot(roundRef, async (rSnap) => {
-          if (!rSnap.exists()) return;
-          const rd = rSnap.data();
-          const url = resolveImageUrl(rd.pageImage || "");
-          if (!url) return;
-          try {
-            const img = await loadImage(url);
-            dataCache = { crop: normalizeCrop(rd.crop), answer: rd.answer };
-            imgCache = img;
-            hydrateSlidersOnceFrom(dataCache.crop);
-            draw();
-          } catch (e) { console.error("Image load failed:", e); }
-        });
-      } else {
-        // Legacy single-image mode (pageImage/crop/answer at room level)
-        const url = resolveImageUrl(room.pageImage || "");
-        if (!url) return;
-        try {
-          const img = await loadImage(url);
-          dataCache = { crop: normalizeCrop(room.crop), answer: room.answer };
-          imgCache = img;
-          hydrateSlidersOnceFrom(dataCache.crop);
-          draw();
-        } catch (e) { console.error("Image load failed:", e); }
+        const ok = await showRoundDoc(room.currentRoundId);
+        if (ok) return;
+      }
+
+      // 2) Fallback: legacy fields on room (kept for safety)
+      const url = resolveImageUrl(room.pageImage || "");
+      console.log("[GW] fallback room-level →", { url, crop: room.crop, answer: room.answer });
+      if (!url) return;
+      try {
+        const img = await loadImage(url);
+        dataCache = { crop: normalizeCrop(room.crop), answer: room.answer };
+        imgCache = img;
+        hydrateSlidersOnceFrom(dataCache.crop);
+        draw();
+      } catch (e) {
+        console.error("[GW] Image failed (room-level):", e);
       }
     });
 
     /* ---------------- Guess submit ---------------- */
     document.getElementById('submitBtn').addEventListener('click', async () => {
+      console.log("[GW] submit clicked");
       const guess = (answerInput.value || "").trim();
       if (!guess || !dataCache) return;
 
@@ -319,6 +362,25 @@
       playerCountEl.textContent = `${count} ${count===1?"player":"players"}`;
       leaderRows.innerHTML = rows.length ? rows.join("") : `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
     });
+
+    /* ---------------- Admin: Next (Random) ---------------- */
+    async function goToRandomRound() {
+      const roundsCol = collection(db, "rooms", "game1", "rounds");
+      const snap = await getDocs(roundsCol);
+      const ids = snap.docs.map(d => d.id);
+      if (!ids.length) return;
+
+      const roomSnap = await getDoc(roomRef);
+      const cur = roomSnap.data()?.currentRoundId;
+      let nextId = ids[Math.floor(Math.random() * ids.length)];
+      if (ids.length > 1) {
+        while (nextId === cur) {
+          nextId = ids[Math.floor(Math.random() * ids.length)];
+        }
+      }
+      await updateDoc(roomRef, { currentRoundId: nextId });
+    }
+    nextBtn?.addEventListener('click', goToRandomRound);
   </script>
 </body>
 </html>
