@@ -25,8 +25,6 @@
     th{border-bottom:1px solid var(--rim);font-weight:700}
     .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);
          border:1px solid rgba(255,255,255,.12);font-size:.8rem}
-
-    /* Dev panel (visible only with ?dev=1) */
     #devBox{display:none;margin-top:16px;background:#222;padding:14px;border-radius:12px}
     #devBox label{display:block;margin:8px 0 4px}
     #devBox input[type="range"]{width:100%}
@@ -69,9 +67,9 @@
       </table>
     </div>
 
-    <!-- DEV CONTROLS (shown only with ?dev=1) -->
+    <!-- DEV CONTROLS -->
     <div id="devBox">
-      <h3 style="margin:0 0 10px">🔧 Dev crop controls (open page with <code>?dev=1</code>)</h3>
+      <h3 style="margin:0 0 10px">🔧 Dev crop controls (?dev=1)</h3>
       <label>xPct <input id="xPct" type="range" min="0" max="1" step="0.01"></label>
       <label>yPct <input id="yPct" type="range" min="0" max="1" step="0.01"></label>
       <label>wPct <input id="wPct" type="range" min="0.05" max="1" step="0.01"></label>
@@ -82,10 +80,10 @@
   </div>
 
   <script type="module">
-    /* ---------------- Firebase ---------------- */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
-      getFirestore, doc, onSnapshot, setDoc, collection, onSnapshot as subColSnapshot
+      getFirestore, doc, onSnapshot, setDoc, getDoc,
+      collection, onSnapshot as subColSnapshot
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -99,7 +97,7 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    /* ---------------- Elements ---------------- */
+    /* Elements */
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const qEl = document.getElementById('question');
@@ -108,81 +106,70 @@
     const leaderRows = document.getElementById('leaderRows');
     const playerCountEl = document.getElementById('playerCount');
 
-    // Dev controls
+    /* Dev panel */
     const params = new URLSearchParams(window.location.search);
     const dev = params.has('dev');
-    const devBox = document.getElementById('devBox');
+    if (dev) document.getElementById('devBox').style.display = 'block';
     const xSlider = document.getElementById('xPct');
     const ySlider = document.getElementById('yPct');
     const wSlider = document.getElementById('wPct');
     const hSlider = document.getElementById('hPct');
     const jsonOut = document.getElementById('jsonOut');
-    if (dev) devBox.style.display = 'block';
 
-    // Simple identity
-    let playerId = localStorage.getItem('playerId'); if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
-    let playerName = localStorage.getItem('playerName'); if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
+    /* Player identity */
+    let playerId = localStorage.getItem('playerId');
+    if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
+    let playerName = localStorage.getItem('playerName');
+    if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
 
     const roomRef = doc(db, "rooms", "game1");
 
     let dataCache = null;
     let imgCache = null;
 
-    /* ---------------- Helpers ---------------- */
+    /* Helpers */
     function normalizeCrop(c) {
-      const x = Number(c?.xPct);
-      const y = Number(c?.yPct);
-      const w = Number(c?.wPct);
-      const h = Number(c?.hPct);
+      const x = parseFloat(c?.xPct);
+      const y = parseFloat(c?.yPct);
+      const w = parseFloat(c?.wPct);
+      const h = parseFloat(c?.hPct);
       return {
         xPct: Number.isFinite(x) ? x : 0,
         yPct: Number.isFinite(y) ? y : 0,
-        wPct: (Number.isFinite(w) && w > 0 && w <= 1) ? w : 1,
-        hPct: (Number.isFinite(h) && h > 0 && h <= 1) ? h : 1,
+        wPct: Number.isFinite(w) && w > 0 ? w : 1,
+        hPct: Number.isFinite(h) && h > 0 ? h : 1,
       };
     }
-
     function resolveImageUrl(s) {
       if (!s) return "";
-      if (s.startsWith("http")) return s;      // allow full URLs too
-      return "/" + s.replace(/^\/+/, "");      // "page01.png" -> "/page01.png"
+      if (s.startsWith("http")) return s;
+      return "/" + s.replace(/^\/+/, "");
     }
-
     function loadImage(url) {
       return new Promise((resolve, reject) => {
-        const img = new Image();               // same-origin: do NOT set crossOrigin
+        const img = new Image();
         img.onload = () => resolve(img);
         img.onerror = () => reject(new Error("Image failed: " + url));
-        img.src = url;                         // no cache-buster needed
+        img.src = url;
       });
     }
-
-    /* ---------------- Drawing ---------------- */
     function draw() {
       if (!dataCache || !imgCache) return;
       const img = imgCache;
-
-      // Get normalized crop and clamp it so the rect stays inside the image
       let { xPct, yPct, wPct, hPct } = normalizeCrop(dataCache.crop || {});
       wPct = Math.min(wPct, 1 - xPct);
       hPct = Math.min(hPct, 1 - yPct);
-
       const W = img.naturalWidth, H = img.naturalHeight;
       const sx = Math.round(xPct * W);
       const sy = Math.round(yPct * H);
       const sw = Math.max(1, Math.round(wPct * W));
       const sh = Math.max(1, Math.round(hPct * H));
-
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     }
-
-    /* ---------------- Dev sliders (preview only) ---------------- */
-    let devHydrated = false; // prevent Firestore from overwriting your active slider edits
-
     function hydrateSlidersOnceFrom(crop) {
-      if (!dev || devHydrated || !crop) return;
+      if (!dev || !crop) return;
       xSlider.value = crop.xPct ?? 0;
       ySlider.value = crop.yPct ?? 0;
       wSlider.value = crop.wPct ?? 1;
@@ -193,63 +180,88 @@
         wPct: Number(wSlider.value),
         hPct: Number(hSlider.value),
       }, null, 2);
-      devHydrated = true;
     }
 
-    [xSlider,ySlider,wSlider,hSlider].forEach(sl => {
-      sl?.addEventListener('input', () => {
-        if (!dataCache) return;
-        dataCache.crop = {
-          xPct: Number(xSlider.value),
-          yPct: Number(ySlider.value),
-          wPct: Number(wSlider.value),
-          hPct: Number(hSlider.value),
-        };
-        jsonOut.textContent = JSON.stringify(dataCache.crop, null, 2);
-        draw();
-      });
-    });
+    /* Fuzzy answer checking */
+    function norm(s) {
+      return (s || "").toLowerCase().trim().replace(/\s+/g, " ");
+    }
+    function levenshtein(a, b) {
+      const m = [];
+      for (let i = 0; i <= b.length; i++) m[i] = [i];
+      for (let j = 0; j <= a.length; j++) m[0][j] = j;
+      for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+          if (b.charAt(i-1) === a.charAt(j-1)) {
+            m[i][j] = m[i-1][j-1];
+          } else {
+            m[i][j] = Math.min(
+              m[i-1][j-1] + 1,
+              m[i][j-1] + 1,
+              m[i-1][j] + 1
+            );
+          }
+        }
+      }
+      return m[b.length][a.length];
+    }
+    function isCorrect(target, guess) {
+      const t = norm(target);
+      const g = norm(guess);
+      if (!t || !g) return false;
+      if (t === g) return true;
+      const dist = levenshtein(t, g);
+      return dist <= 2; // allow small typos
+    }
 
-    /* ---------------- Live room subscription ---------------- */
+    /* Subscribe to room */
     onSnapshot(roomRef, async (snap) => {
       if (!snap.exists()) return;
       const d = snap.data();
       qEl.textContent = d.question || "Who is this?";
-
-      const url = resolveImageUrl(d.pageImage || d.currentImage || "");
+      const url = resolveImageUrl(d.pageImage || "");
       if (!url) return;
-
       try {
         const img = await loadImage(url);
-        dataCache = { crop: normalizeCrop(d.crop) };
+        dataCache = { crop: normalizeCrop(d.crop), answer: d.answer };
         imgCache = img;
-
-        // Initialize sliders only once per page load
         hydrateSlidersOnceFrom(dataCache.crop);
-
         draw();
-      } catch (e) {
-        console.error("Image load failed:", e);
-      }
+      } catch (e) { console.error("Image load failed:", e); }
     });
 
-    /* ---------------- Guess submit ---------------- */
+    /* Submit guess with scoring */
     document.getElementById('submitBtn').addEventListener('click', async () => {
       const guess = (answerInput.value || "").trim();
-      if (!guess) return;
+      if (!guess || !dataCache) return;
+      const correct = isCorrect(dataCache.answer, guess);
+      const points = correct ? 1 : 0;
       const playerRef = doc(db, "rooms", "game1", "Players", playerId);
-      await setDoc(playerRef, { name: playerName, lastGuess: guess, score: 0, ts: Date.now() }, { merge: true });
-      feedback.textContent = "✅ Guess submitted!";
+      const pSnap = await getDoc(playerRef);
+      const prev = (pSnap.exists() && typeof pSnap.data().score === "number") ? pSnap.data().score : 0;
+      await setDoc(playerRef, {
+        name: playerName,
+        lastGuess: guess,
+        lastResult: correct ? "✅" : "❌",
+        score: prev + points,
+        ts: Date.now()
+      }, { merge: true });
+      feedback.textContent = correct ? "✅ Correct!" : "❌ Not quite.";
       setTimeout(()=> feedback.textContent="", 1500);
     });
 
-    /* ---------------- Live leaderboard ---------------- */
+    /* Leaderboard */
     subColSnapshot(collection(db, "rooms", "game1", "Players"), (snap) => {
       const rows = [];
       let count = 0;
       snap.forEach(docSnap => {
         const p = docSnap.data() || {};
-        rows.push(`<tr><td>${p.name||"(anon)"}</td><td>${p.lastGuess||"—"}</td><td>${typeof p.score==="number"?p.score:0}</td></tr>`);
+        const last = [p.lastGuess || "—", p.lastResult || ""].filter(Boolean).join(" ");
+        rows.push(`<tr>
+          <td>${p.name||"(anon)"}</td>
+          <td>${last}</td>
+          <td>${typeof p.score==="number"?p.score:0}</td>
+        </tr>`);
         count++;
       });
       playerCountEl.textContent = `${count} ${count===1?"player":"players"}`;
