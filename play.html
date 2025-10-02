@@ -30,7 +30,7 @@
     #devBox input[type="range"]{width:100%}
     #jsonOut{background:#111;color:#c9f0ff;padding:10px;border-radius:8px;overflow:auto}
     #dbg{position:fixed;left:12px;bottom:12px;background:#111;color:#9fe;padding:8px 10px;
-         border:1px solid #2b3170;border-radius:10px;font:12px/1.2 monospace;max-width:70vw;opacity:.9}
+         border:1px solid #2b3170;border-radius:10px;font:12px/1.2 monospace;max-width:70vw;opacity:.9;display:none}
   </style>
 </head>
 <body>
@@ -67,7 +67,6 @@
 
     <div id="devBox">
       <h3 style="margin:0 0 10px">🔧 Dev crop controls (open page with <code>?dev=1</code>)</h3>
-      <!-- explicit defaults so they don't sit in the middle -->
       <label>xPct <input id="xPct" type="range" min="0" max="1" step="0.01" value="0"></label>
       <label>yPct <input id="yPct" type="range" min="0" max="1" step="0.01" value="0"></label>
       <label>wPct <input id="wPct" type="range" min="0.05" max="1" step="0.01" value="1"></label>
@@ -77,15 +76,16 @@
     </div>
   </div>
 
-  <div id="dbg" style="display:none"></div>
+  <div id="dbg"></div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
-      getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, updateDoc,
+      getFirestore, doc, onSnapshot, getDoc, setDoc, getDocs, updateDoc,
       collection, onSnapshot as subColSnapshot
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
+    /* ---------- Firebase ---------- */
     const firebaseConfig = {
       apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
       authDomain: "weha07boyoz-game.firebaseapp.com",
@@ -97,6 +97,7 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
+    /* ---------- Elements & flags ---------- */
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const qEl = document.getElementById('question');
@@ -110,29 +111,31 @@
     const params = new URLSearchParams(window.location.search);
     const dev = params.has('dev');
     const isAdmin = params.has('admin');
-    const devBox = document.getElementById('devBox');
+    if (dev) dbg.style.display = 'block';
+    if (params.has('dev')) document.getElementById('devBox').style.display = 'block';
+    if (isAdmin) nextBtn.style.display = 'inline-block';
+
+    // Dev sliders
     const xSlider = document.getElementById('xPct');
     const ySlider = document.getElementById('yPct');
     const wSlider = document.getElementById('wPct');
     const hSlider = document.getElementById('hPct');
     const jsonOut = document.getElementById('jsonOut');
-    if (dev) { devBox.style.display = 'block'; dbg.style.display = 'block'; }
-    if (isAdmin) nextBtn.style.display = 'inline-block';
 
-    let playerId = localStorage.getItem('playerId');
-    if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
-    let playerName = localStorage.getItem('playerName');
-    if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
+    // identity
+    let playerId = localStorage.getItem('playerId'); if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
+    let playerName = localStorage.getItem('playerName'); if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
 
     const roomRef = doc(db, "rooms", "game1");
 
-    let dataCache = null;
-    let imgCache = null;
+    let dataCache = null;     // { crop, answer }
+    let imgCache = null;      // HTMLImageElement
     let devPreviewCrop = null;
     let unsubscribeRound = null;
 
-    function log(...args){ console.log(...args); if(dev){ dbg.textContent = args.map(a=> (typeof a==='object'?JSON.stringify(a):String(a))).join(' ');} }
+    function log(...a){ if(!dev) return; dbg.textContent = a.map(x => typeof x==='object' ? JSON.stringify(x) : String(x)).join(' '); console.log(...a); }
 
+    /* ---------- Helpers ---------- */
     function normalizeCrop(c) {
       const x = parseFloat(c?.xPct), y = parseFloat(c?.yPct);
       const w = parseFloat(c?.wPct), h = parseFloat(c?.hPct);
@@ -146,29 +149,17 @@
 
     function resolveImageUrl(s) {
       if (!s) return "";
-      if (/^https?:\/\//i.test(s)) return s;
-      return s.replace(/^\/+/, "");      // relative path preferred
+      if (/^https?:\/\//i.test(s)) return s;         // absolute ok
+      return s.replace(/^\/+/, "");                  // relative (no leading slash)
     }
 
-    // Tries both "page01.png" and "/page01.png"
-    async function loadImageSmart(path) {
-      const candidates = [resolveImageUrl(path), "/" + resolveImageUrl(path)];
-      let lastErr;
-      for (const url of candidates) {
-        try {
-          const img = await new Promise((res, rej) => {
-            const im = new Image();
-            im.onload = () => res(im);
-            im.onerror = () => rej(new Error("Image failed: " + url));
-            im.src = url;
-          });
-          log("[IMG OK]", url);
-          return img;
-        } catch (e) {
-          lastErr = e; log("[IMG FAIL]", String(e.message));
-        }
-      }
-      throw lastErr;
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error("Image failed: " + url));
+        img.src = url;
+      });
     }
 
     function draw() {
@@ -188,7 +179,7 @@
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     }
 
-    function hydrateSlidersOnceFrom(crop) {
+    function hydrateSlidersFrom(crop) {
       if (!dev || !crop) return;
       xSlider.value = crop.xPct ?? 0;
       ySlider.value = crop.yPct ?? 0;
@@ -204,6 +195,7 @@
       draw();
     }));
 
+    /* ---------- Fuzzy answer ---------- */
     function _norm(s){ return (s||"").toLowerCase().trim().replace(/\s+/g," "); }
     function levenshtein(a,b){
       const m=[]; for(let i=0;i<=b.length;i++) m[i]=[i]; for(let j=0;j<=a.length;j++) m[0][j]=j;
@@ -213,67 +205,66 @@
     }
     function isCorrect(target, guess){ const t=_norm(target), g=_norm(guess); if(!t||!g) return false; if(t===g) return true; return levenshtein(t,g)<=2; }
 
-    async function showRoundDoc(roundId) {
+    /* ---------- Load a specific round ---------- */
+    async function subscribeToRound(roundId) {
       if (!roundId) return false;
       const rRef = doc(db, "rooms", "game1", "rounds", roundId);
+
+      // Initial fetch to draw immediately
       const snap = await getDoc(rRef);
       if (!snap.exists()) { log("[ROUND MISSING]", roundId); return false; }
       const d = snap.data();
-      const url = d.pageImage || "";
-      log("[ROUND]", roundId, "url:", url, "crop:", d.crop, "answer:", d.answer);
+      const url = resolveImageUrl(d.pageImage || "");
+      log("[ROUND INIT]", { roundId, url, crop: d.crop, answer: d.answer });
 
       try {
-        const img = await loadImageSmart(url);
+        const img = await loadImage(url);
         dataCache = { crop: normalizeCrop(d.crop), answer: d.answer };
         imgCache = img;
-        hydrateSlidersOnceFrom(dataCache.crop);
+        hydrateSlidersFrom(dataCache.crop);
         draw();
-      } catch (e) {
-        log("[LOAD ERROR]", e.message);
+      } catch(e) {
+        log("[IMG FAIL INIT]", e.message);
         return false;
       }
 
+      // Live subscribe for subsequent edits
       if (unsubscribeRound) unsubscribeRound();
       unsubscribeRound = onSnapshot(rRef, async (s2) => {
         if (!s2.exists()) return;
         const d2 = s2.data();
+        const u2 = resolveImageUrl(d2.pageImage || "");
+        log("[ROUND UPDATE]", { roundId, url: u2, crop: d2.crop, answer: d2.answer });
         try {
-          const img2 = await loadImageSmart(d2.pageImage || "");
+          const img2 = await loadImage(u2);
           dataCache = { crop: normalizeCrop(d2.crop), answer: d2.answer };
           imgCache = img2;
-          draw();
-        } catch (e) { log("[ROUND WATCH IMG FAIL]", e.message); }
+          draw(); // don't re-hydrate sliders here; keep your dev preview if you moved them
+        } catch(e) {
+          log("[IMG FAIL UPDATE]", e.message);
+        }
       });
 
       return true;
     }
 
+    /* ---------- Room subscription: point to the active round ---------- */
     onSnapshot(roomRef, async (roomSnap) => {
       if (!roomSnap.exists()) return;
       const room = roomSnap.data();
       qEl.textContent = room.question || "Who is this?";
-      log("[ROOM]", { currentRoundId: room.currentRoundId, question: room.question });
+      log("[ROOM]", room);
 
       if (room.currentRoundId) {
-        const ok = await showRoundDoc(room.currentRoundId);
-        if (ok) return;
+        await subscribeToRound(room.currentRoundId);
+      } else {
+        // If no currentRoundId, you could optionally fall back to legacy fields here.
+        log("[NO currentRoundId] Set rooms/game1.currentRoundId to a round id.");
       }
-
-      // Fallback (legacy)
-      const url = room.pageImage || "";
-      log("[FALLBACK ROOM-LEVEL]", url, room.crop);
-      if (!url) return;
-      try {
-        const img = await loadImageSmart(url);
-        dataCache = { crop: normalizeCrop(room.crop), answer: room.answer };
-        imgCache = img;
-        hydrateSlidersOnceFrom(dataCache.crop);
-        draw();
-      } catch (e) { log("[FALLBACK IMG FAIL]", e.message); }
     });
 
+    /* ---------- Submit guess ---------- */
     document.getElementById('submitBtn').addEventListener('click', async () => {
-      log("[SUBMIT] click");
       const guess = (answerInput.value || "").trim();
       if (!guess || !dataCache) return;
       const correct = isCorrect(dataCache.answer, guess);
@@ -284,14 +275,18 @@
       const prev = (pSnap.exists() && typeof pSnap.data().score === "number") ? pSnap.data().score : 0;
 
       await setDoc(playerRef, {
-        name: playerName, lastGuess: guess, lastResult: correct ? "✅":"❌",
-        score: prev + points, ts: Date.now()
+        name: playerName,
+        lastGuess: guess,
+        lastResult: correct ? "✅" : "❌",
+        score: prev + points,
+        ts: Date.now()
       }, { merge: true });
 
       feedback.textContent = correct ? "✅ Correct!" : "❌ Not quite.";
       setTimeout(()=> feedback.textContent="", 1500);
     });
 
+    /* ---------- Live leaderboard ---------- */
     subColSnapshot(collection(db, "rooms", "game1", "Players"), (snap) => {
       const rows = []; let count = 0;
       snap.forEach(docSnap => {
@@ -304,13 +299,13 @@
       leaderRows.innerHTML = rows.length ? rows.join("") : `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
     });
 
+    /* ---------- Admin: randomize next round ---------- */
     async function goToRandomRound() {
       const roundsCol = collection(db, "rooms", "game1", "rounds");
       const snap = await getDocs(roundsCol);
       const ids = snap.docs.map(d => d.id);
       if (!ids.length) return;
-      const roomSnap = await getDoc(roomRef);
-      const cur = roomSnap.data()?.currentRoundId;
+      const cur = (await getDoc(roomRef)).data()?.currentRoundId;
       let nextId = ids[Math.floor(Math.random()*ids.length)];
       if (ids.length > 1) { while (nextId === cur) nextId = ids[Math.floor(Math.random()*ids.length)]; }
       await updateDoc(roomRef, { currentRoundId: nextId });
