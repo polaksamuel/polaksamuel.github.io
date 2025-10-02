@@ -25,12 +25,12 @@
     th{border-bottom:1px solid var(--rim);font-weight:700}
     .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);
          border:1px solid rgba(255,255,255,.12);font-size:.8rem}
-
-    /* Dev panel (visible only with ?dev=1) */
     #devBox{display:none;margin-top:16px;background:#222;padding:14px;border-radius:12px}
     #devBox label{display:block;margin:8px 0 4px}
     #devBox input[type="range"]{width:100%}
     #jsonOut{background:#111;color:#c9f0ff;padding:10px;border-radius:8px;overflow:auto}
+    #dbg{position:fixed;left:12px;bottom:12px;background:#111;color:#9fe;padding:8px 10px;
+         border:1px solid #2b3170;border-radius:10px;font:12px/1.2 monospace;max-width:70vw;opacity:.9}
   </style>
 </head>
 <body>
@@ -39,20 +39,17 @@
   <div class="card">
     <h2 id="question">Who is this player?</h2>
 
-    <!-- CROPPED IMAGE RENDER TARGET -->
     <div class="stage">
       <canvas id="canvas" width="820" height="520"></canvas>
     </div>
 
-    <!-- Answer -->
     <input id="answer" placeholder="Type your guess here">
     <div>
       <button id="submitBtn">Submit</button>
-      <button id="nextBtn" style="display:none; margin-left:8px">Next (Random)</button>
+      <button id="nextBtn" style="display:none;margin-left:8px">Next (Random)</button>
     </div>
     <div id="feedback" class="feedback"></div>
 
-    <!-- Leaderboard -->
     <div class="section">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <h3 style="margin:0">🏆 Leaderboard</h3>
@@ -60,11 +57,7 @@
       </div>
       <table>
         <thead>
-          <tr>
-            <th style="width:38%">Player</th>
-            <th style="width:32%">Last guess</th>
-            <th style="width:30%">Score</th>
-          </tr>
+          <tr><th style="width:38%">Player</th><th style="width:32%">Last guess</th><th style="width:30%">Score</th></tr>
         </thead>
         <tbody id="leaderRows">
           <tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>
@@ -72,20 +65,21 @@
       </table>
     </div>
 
-    <!-- DEV CONTROLS (shown only with ?dev=1) -->
     <div id="devBox">
       <h3 style="margin:0 0 10px">🔧 Dev crop controls (open page with <code>?dev=1</code>)</h3>
-      <label>xPct <input id="xPct" type="range" min="0" max="1" step="0.01"></label>
-      <label>yPct <input id="yPct" type="range" min="0" max="1" step="0.01"></label>
-      <label>wPct <input id="wPct" type="range" min="0.05" max="1" step="0.01"></label>
-      <label>hPct <input id="hPct" type="range" min="0.05" max="1" step="0.01"></label>
+      <!-- explicit defaults so they don't sit in the middle -->
+      <label>xPct <input id="xPct" type="range" min="0" max="1" step="0.01" value="0"></label>
+      <label>yPct <input id="yPct" type="range" min="0" max="1" step="0.01" value="0"></label>
+      <label>wPct <input id="wPct" type="range" min="0.05" max="1" step="0.01" value="1"></label>
+      <label>hPct <input id="hPct" type="range" min="0.05" max="1" step="0.01" value="1"></label>
       <div style="margin-top:8px">Copy into Firestore <code>crop</code> map:</div>
-      <pre id="jsonOut"></pre>
+      <pre id="jsonOut">{ "xPct": 0, "yPct": 0, "wPct": 1, "hPct": 1 }</pre>
     </div>
   </div>
 
+  <div id="dbg" style="display:none"></div>
+
   <script type="module">
-    /* ---------------- Firebase ---------------- */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
       getFirestore, doc, onSnapshot, setDoc, getDoc, getDocs, updateDoc,
@@ -103,7 +97,6 @@
     const app = initializeApp(firebaseConfig);
     const db  = getFirestore(app);
 
-    /* ---------------- Elements ---------------- */
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const qEl = document.getElementById('question');
@@ -112,8 +105,8 @@
     const leaderRows = document.getElementById('leaderRows');
     const playerCountEl = document.getElementById('playerCount');
     const nextBtn = document.getElementById('nextBtn');
+    const dbg = document.getElementById('dbg');
 
-    // Dev & Admin controls
     const params = new URLSearchParams(window.location.search);
     const dev = params.has('dev');
     const isAdmin = params.has('admin');
@@ -123,10 +116,9 @@
     const wSlider = document.getElementById('wPct');
     const hSlider = document.getElementById('hPct');
     const jsonOut = document.getElementById('jsonOut');
-    if (dev) devBox.style.display = 'block';
+    if (dev) { devBox.style.display = 'block'; dbg.style.display = 'block'; }
     if (isAdmin) nextBtn.style.display = 'inline-block';
 
-    // Simple identity
     let playerId = localStorage.getItem('playerId');
     if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
     let playerName = localStorage.getItem('playerName');
@@ -136,159 +128,121 @@
 
     let dataCache = null;
     let imgCache = null;
-    let devPreviewCrop = null;   // live preview crop when using sliders
+    let devPreviewCrop = null;
     let unsubscribeRound = null;
 
-    /* ---------------- Helpers ---------------- */
+    function log(...args){ console.log(...args); if(dev){ dbg.textContent = args.map(a=> (typeof a==='object'?JSON.stringify(a):String(a))).join(' ');} }
+
     function normalizeCrop(c) {
-      const x = parseFloat(c?.xPct);
-      const y = parseFloat(c?.yPct);
-      const w = parseFloat(c?.wPct);
-      const h = parseFloat(c?.hPct);
+      const x = parseFloat(c?.xPct), y = parseFloat(c?.yPct);
+      const w = parseFloat(c?.wPct), h = parseFloat(c?.hPct);
       return {
         xPct: Number.isFinite(x) ? x : 0,
         yPct: Number.isFinite(y) ? y : 0,
-        wPct: Number.isFinite(w) && w > 0 ? w : 1,
-        hPct: Number.isFinite(h) && h > 0 ? h : 1,
+        wPct: (Number.isFinite(w) && w > 0) ? w : 1,
+        hPct: (Number.isFinite(h) && h > 0) ? h : 1,
       };
     }
 
     function resolveImageUrl(s) {
       if (!s) return "";
-      if (/^https?:\/\//i.test(s)) return s; // allow absolute URLs
-      return s.replace(/^\/+/, "");          // keep relative path (e.g., "page01.png")
+      if (/^https?:\/\//i.test(s)) return s;
+      return s.replace(/^\/+/, "");      // relative path preferred
     }
 
-    function loadImage(url) {
-      return new Promise((resolve, reject) => {
-        const img = new Image();               // same-origin
-        img.onload = () => resolve(img);
-        img.onerror = () => reject(new Error("Image failed: " + url));
-        img.src = url;
-      });
+    // Tries both "page01.png" and "/page01.png"
+    async function loadImageSmart(path) {
+      const candidates = [resolveImageUrl(path), "/" + resolveImageUrl(path)];
+      let lastErr;
+      for (const url of candidates) {
+        try {
+          const img = await new Promise((res, rej) => {
+            const im = new Image();
+            im.onload = () => res(im);
+            im.onerror = () => rej(new Error("Image failed: " + url));
+            im.src = url;
+          });
+          log("[IMG OK]", url);
+          return img;
+        } catch (e) {
+          lastErr = e; log("[IMG FAIL]", String(e.message));
+        }
+      }
+      throw lastErr;
     }
 
-    /* ---------------- Drawing ---------------- */
     function draw() {
       if (!dataCache || !imgCache) return;
       const img = imgCache;
-
-      // Prefer the dev slider preview crop if present
       const rawCrop = (dev && devPreviewCrop) ? devPreviewCrop : (dataCache.crop || {});
       let { xPct, yPct, wPct, hPct } = normalizeCrop(rawCrop);
       wPct = Math.min(wPct, 1 - xPct);
       hPct = Math.min(hPct, 1 - yPct);
 
       const W = img.naturalWidth, H = img.naturalHeight;
-      const sx = Math.round(xPct * W);
-      const sy = Math.round(yPct * H);
-      const sw = Math.max(1, Math.round(wPct * W));
-      const sh = Math.max(1, Math.round(hPct * H));
+      const sx = Math.round(xPct * W), sy = Math.round(yPct * H);
+      const sw = Math.max(1, Math.round(wPct * W)), sh = Math.max(1, Math.round(hPct * H));
 
       ctx.clearRect(0,0,canvas.width,canvas.height);
       ctx.imageSmoothingQuality = "high";
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
     }
 
-    /* ---------------- Dev sliders (preview only) ---------------- */
     function hydrateSlidersOnceFrom(crop) {
       if (!dev || !crop) return;
       xSlider.value = crop.xPct ?? 0;
       ySlider.value = crop.yPct ?? 0;
       wSlider.value = crop.wPct ?? 1;
       hSlider.value = crop.hPct ?? 1;
-      devPreviewCrop = {    // initialize preview from the current crop
-        xPct: Number(xSlider.value),
-        yPct: Number(ySlider.value),
-        wPct: Number(wSlider.value),
-        hPct: Number(hSlider.value),
-      };
+      devPreviewCrop = { xPct:+xSlider.value, yPct:+ySlider.value, wPct:+wSlider.value, hPct:+hSlider.value };
       jsonOut.textContent = JSON.stringify(devPreviewCrop, null, 2);
     }
 
-    [xSlider, ySlider, wSlider, hSlider].forEach(sl => {
-      sl?.addEventListener('input', () => {
-        devPreviewCrop = {
-          xPct: Number(xSlider.value),
-          yPct: Number(ySlider.value),
-          wPct: Number(wSlider.value),
-          hPct: Number(hSlider.value),
-        };
-        jsonOut.textContent = JSON.stringify(devPreviewCrop, null, 2);
-        draw();
-      });
-    });
+    [xSlider,ySlider,wSlider,hSlider].forEach(sl => sl?.addEventListener('input', () => {
+      devPreviewCrop = { xPct:+xSlider.value, yPct:+ySlider.value, wPct:+wSlider.value, hPct:+hSlider.value };
+      jsonOut.textContent = JSON.stringify(devPreviewCrop, null, 2);
+      draw();
+    }));
 
-    /* ---------------- Fuzzy answer checking ---------------- */
-    function _norm(s) {
-      return (s || "").toLowerCase().trim().replace(/\s+/g, " ");
+    function _norm(s){ return (s||"").toLowerCase().trim().replace(/\s+/g," "); }
+    function levenshtein(a,b){
+      const m=[]; for(let i=0;i<=b.length;i++) m[i]=[i]; for(let j=0;j<=a.length;j++) m[0][j]=j;
+      for(let i=1;i<=b.length;i++){ for(let j=1;j<=a.length;j++){
+        m[i][j]= b[i-1]===a[j-1] ? m[i-1][j-1] : Math.min(m[i-1][j-1]+1,m[i][j-1]+1,m[i-1][j]+1);
+      }} return m[b.length][a.length];
     }
-    function levenshtein(a, b) {
-      const m = [];
-      for (let i = 0; i <= b.length; i++) m[i] = [i];
-      for (let j = 0; j <= a.length; j++) m[0][j] = j;
-      for (let i = 1; i <= b.length; i++) {
-        for (let j = 1; j <= a.length; j++) {
-          if (b.charAt(i-1) === a.charAt(j-1)) {
-            m[i][j] = m[i-1][j-1];
-          } else {
-            m[i][j] = Math.min(
-              m[i-1][j-1] + 1,
-              m[i][j-1] + 1,
-              m[i-1][j] + 1
-            );
-          }
-        }
-      }
-      return m[b.length][a.length];
-    }
-    function isCorrect(target, guess) {
-      const t = _norm(target);
-      const g = _norm(guess);
-      if (!t || !g) return false;
-      if (t === g) return true;
-      return levenshtein(t, g) <= 2;  // small typos allowed
-    }
+    function isCorrect(target, guess){ const t=_norm(target), g=_norm(guess); if(!t||!g) return false; if(t===g) return true; return levenshtein(t,g)<=2; }
 
-    /* ---------------- Room + Round loading (robust) ---------------- */
     async function showRoundDoc(roundId) {
       if (!roundId) return false;
-
       const rRef = doc(db, "rooms", "game1", "rounds", roundId);
       const snap = await getDoc(rRef);
-      if (!snap.exists()) {
-        console.error("[GW] Round doc missing:", roundId);
+      if (!snap.exists()) { log("[ROUND MISSING]", roundId); return false; }
+      const d = snap.data();
+      const url = d.pageImage || "";
+      log("[ROUND]", roundId, "url:", url, "crop:", d.crop, "answer:", d.answer);
+
+      try {
+        const img = await loadImageSmart(url);
+        dataCache = { crop: normalizeCrop(d.crop), answer: d.answer };
+        imgCache = img;
+        hydrateSlidersOnceFrom(dataCache.crop);
+        draw();
+      } catch (e) {
+        log("[LOAD ERROR]", e.message);
         return false;
       }
 
-      const d = snap.data();
-      const url = resolveImageUrl(d.pageImage || "");
-      console.log("[GW] showRoundDoc →", { roundId, url, crop: d.crop, answer: d.answer });
-
-      if (!url) return false;
-
-      // Load image once and draw immediately
-      const img = await loadImage(url);
-      dataCache = { crop: normalizeCrop(d.crop), answer: d.answer };
-      imgCache = img;
-      hydrateSlidersOnceFrom(dataCache.crop);
-      draw();
-
-      // Subscribe for future updates
       if (unsubscribeRound) unsubscribeRound();
       unsubscribeRound = onSnapshot(rRef, async (s2) => {
         if (!s2.exists()) return;
         const d2 = s2.data();
-        const u2 = resolveImageUrl(d2.pageImage || "");
-        console.log("[GW] round onSnapshot →", { roundId, url: u2, crop: d2.crop, answer: d2.answer });
         try {
-          const img2 = await loadImage(u2);
+          const img2 = await loadImageSmart(d2.pageImage || "");
           dataCache = { crop: normalizeCrop(d2.crop), answer: d2.answer };
           imgCache = img2;
-          draw(); // don't re-hydrate sliders here so your manual preview stays
-        } catch (e) {
-          console.error("[GW] Image failed while watching round:", e);
-        }
+          draw();
+        } catch (e) { log("[ROUND WATCH IMG FAIL]", e.message); }
       });
 
       return true;
@@ -298,34 +252,30 @@
       if (!roomSnap.exists()) return;
       const room = roomSnap.data();
       qEl.textContent = room.question || "Who is this?";
+      log("[ROOM]", { currentRoundId: room.currentRoundId, question: room.question });
 
-      // 1) Try rounds-based flow
       if (room.currentRoundId) {
         const ok = await showRoundDoc(room.currentRoundId);
         if (ok) return;
       }
 
-      // 2) Fallback: legacy fields on room (kept for safety)
-      const url = resolveImageUrl(room.pageImage || "");
-      console.log("[GW] fallback room-level →", { url, crop: room.crop, answer: room.answer });
+      // Fallback (legacy)
+      const url = room.pageImage || "";
+      log("[FALLBACK ROOM-LEVEL]", url, room.crop);
       if (!url) return;
       try {
-        const img = await loadImage(url);
+        const img = await loadImageSmart(url);
         dataCache = { crop: normalizeCrop(room.crop), answer: room.answer };
         imgCache = img;
         hydrateSlidersOnceFrom(dataCache.crop);
         draw();
-      } catch (e) {
-        console.error("[GW] Image failed (room-level):", e);
-      }
+      } catch (e) { log("[FALLBACK IMG FAIL]", e.message); }
     });
 
-    /* ---------------- Guess submit ---------------- */
     document.getElementById('submitBtn').addEventListener('click', async () => {
-      console.log("[GW] submit clicked");
+      log("[SUBMIT] click");
       const guess = (answerInput.value || "").trim();
       if (!guess || !dataCache) return;
-
       const correct = isCorrect(dataCache.answer, guess);
       const points = correct ? 1 : 0;
 
@@ -334,50 +284,35 @@
       const prev = (pSnap.exists() && typeof pSnap.data().score === "number") ? pSnap.data().score : 0;
 
       await setDoc(playerRef, {
-        name: playerName,
-        lastGuess: guess,
-        lastResult: correct ? "✅" : "❌",
-        score: prev + points,
-        ts: Date.now()
+        name: playerName, lastGuess: guess, lastResult: correct ? "✅":"❌",
+        score: prev + points, ts: Date.now()
       }, { merge: true });
 
       feedback.textContent = correct ? "✅ Correct!" : "❌ Not quite.";
       setTimeout(()=> feedback.textContent="", 1500);
     });
 
-    /* ---------------- Live leaderboard ---------------- */
     subColSnapshot(collection(db, "rooms", "game1", "Players"), (snap) => {
-      const rows = [];
-      let count = 0;
+      const rows = []; let count = 0;
       snap.forEach(docSnap => {
         const p = docSnap.data() || {};
         const last = [p.lastGuess || "—", p.lastResult || ""].filter(Boolean).join(" ");
-        rows.push(`<tr>
-          <td>${p.name||"(anon)"}</td>
-          <td>${last}</td>
-          <td>${typeof p.score==="number"?p.score:0}</td>
-        </tr>`);
+        rows.push(`<tr><td>${p.name||"(anon)"}</td><td>${last}</td><td>${typeof p.score==="number"?p.score:0}</td></tr>`);
         count++;
       });
       playerCountEl.textContent = `${count} ${count===1?"player":"players"}`;
       leaderRows.innerHTML = rows.length ? rows.join("") : `<tr><td colspan="3" style="opacity:.8">No players yet.</td></tr>`;
     });
 
-    /* ---------------- Admin: Next (Random) ---------------- */
     async function goToRandomRound() {
       const roundsCol = collection(db, "rooms", "game1", "rounds");
       const snap = await getDocs(roundsCol);
       const ids = snap.docs.map(d => d.id);
       if (!ids.length) return;
-
       const roomSnap = await getDoc(roomRef);
       const cur = roomSnap.data()?.currentRoundId;
-      let nextId = ids[Math.floor(Math.random() * ids.length)];
-      if (ids.length > 1) {
-        while (nextId === cur) {
-          nextId = ids[Math.floor(Math.random() * ids.length)];
-        }
-      }
+      let nextId = ids[Math.floor(Math.random()*ids.length)];
+      if (ids.length > 1) { while (nextId === cur) nextId = ids[Math.floor(Math.random()*ids.length)]; }
       await updateDoc(roomRef, { currentRoundId: nextId });
     }
     nextBtn?.addEventListener('click', goToRandomRound);
