@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin – Next Round</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: Poppins, sans-serif;
+      background: #0b0e1a;
+      color: #e9ecff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    button {
+      background: #38d3ff;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      color: #0b0e1a;
+      font-size: 1.1rem;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+    }
+    button:hover { background: #50e1ff; }
+    h1 { margin-bottom: 20px; }
+    #log { margin-top: 24px; font-size: 0.9rem; color: #aab5ff; white-space: pre-line; text-align: center; }
+  </style>
+</head>
+<body>
+  <h1>🎮 Admin Controls</h1>
+  <button id="nextRound">Next (Random Round)</button>
+  <div id="log">Connecting to Firebase…</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+
+    // === 🔥 Your Firebase Config (copy from your play.html exactly) ===
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT_ID.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const ROOM_ID = "game1";
+    const logEl = document.getElementById('log');
+    const nextBtn = document.getElementById('nextRound');
+
+    nextBtn.addEventListener('click', async () => {
+      try {
+        logEl.textContent = "Fetching rounds…";
+        const roundsSnap = await getDocs(collection(db, "rooms", ROOM_ID, "rounds"));
+        const ids = [];
+        roundsSnap.forEach(d => ids.push(d.id));
+        if (!ids.length) {
+          logEl.textContent = "⚠️ No rounds found.";
+          return;
+        }
+        const pick = ids[Math.floor(Math.random() * ids.length)];
+        await updateDoc(doc(db, "rooms", ROOM_ID), { currentRoundId: pick });
+        logEl.textContent = `✅ Updated to: ${pick}`;
+      } catch (e) {
+        logEl.textContent = "❌ Error updating round. See console.";
+        console.error(e);
+      }
+    });
+
+    logEl.textContent = "✅ Ready – click to change round!";
+  </script>
+</body>
+</html>
