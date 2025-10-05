@@ -2,47 +2,47 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin – Next Round</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    body {
-      font-family: Poppins, sans-serif;
-      background: #0b0e1a;
-      color: #e9ecff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      margin: 0;
-    }
-    button {
-      background: #38d3ff;
-      border: none;
-      border-radius: 8px;
-      padding: 12px 24px;
-      color: #0b0e1a;
-      font-size: 1.1rem;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.2s;
-    }
-    button:hover { background: #50e1ff; }
-    h1 { margin-bottom: 20px; }
-    #log { margin-top: 24px; font-size: 0.9rem; color: #aab5ff; white-space: pre-line; text-align: center; }
+    :root{ --bg:#0b0e1a; --ink:#e9ecff; --brand:#38d3ff; }
+    html,body{margin:0;height:100%}
+    body{font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink);
+         display:flex;align-items:center;justify-content:center}
+    .card{width:min(720px,92vw);padding:28px;border:1px solid rgba(255,255,255,.08);
+          border-radius:16px;background:#11152a;box-shadow:0 20px 45px rgba(0,0,0,.35)}
+    h1{margin:0 0 16px}
+    button{background:var(--brand);color:#00101a;border:none;border-radius:10px;
+           padding:12px 16px;font-weight:700;cursor:pointer}
+    button:disabled{opacity:.6;cursor:not-allowed}
+    .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .muted{opacity:.8}
+    #log{margin-top:14px;white-space:pre-line}
+    .pill{display:inline-block;border:1px solid rgba(255,255,255,.2);border-radius:999px;
+          padding:4px 10px;font-size:.85rem;margin-left:6px}
+    .ok{color:#9ef89e} .bad{color:#ff9e9e}
   </style>
 </head>
 <body>
-  <h1>🎮 Admin Controls</h1>
-  <button id="nextRound">Next (Random Round)</button>
-  <div id="log">Connecting to Firebase…</div>
+  <div class="card">
+    <h1>🎮 Admin Controls</h1>
+    <div class="row" style="margin-bottom:10px">
+      <button id="nextBtn">Next (Random Round)</button>
+      <span id="roundCount" class="muted">Loading rounds…</span>
+      <span id="currentPill" class="pill muted">current: —</span>
+    </div>
+    <div id="log" class="muted">Initializing…</div>
+  </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/10.14.0/firebase-firestore.js";
+    // ---- Firebase (v12.3.0 to match play.html) ----
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import {
+      getFirestore, doc, getDoc, updateDoc, collection, getDocs
+    } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-    // === 🔥 Your Firebase Config (copy from your play.html exactly) ===
+    // >>> COPY THIS CONFIG FROM YOUR play.html EXACTLY <<<
     const firebaseConfig = {
       apiKey: "YOUR_API_KEY",
       authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
@@ -54,31 +54,92 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
-
     const ROOM_ID = "game1";
-    const logEl = document.getElementById('log');
-    const nextBtn = document.getElementById('nextRound');
 
-    nextBtn.addEventListener('click', async () => {
-      try {
-        logEl.textContent = "Fetching rounds…";
-        const roundsSnap = await getDocs(collection(db, "rooms", ROOM_ID, "rounds"));
-        const ids = [];
-        roundsSnap.forEach(d => ids.push(d.id));
-        if (!ids.length) {
-          logEl.textContent = "⚠️ No rounds found.";
-          return;
-        }
-        const pick = ids[Math.floor(Math.random() * ids.length)];
-        await updateDoc(doc(db, "rooms", ROOM_ID), { currentRoundId: pick });
-        logEl.textContent = `✅ Updated to: ${pick}`;
-      } catch (e) {
-        logEl.textContent = "❌ Error updating round. See console.";
+    const nextBtn = document.getElementById('nextBtn');
+    const roundCountEl = document.getElementById('roundCount');
+    const currentPill = document.getElementById('currentPill');
+    const logEl = document.getElementById('log');
+
+    let roundIds = [];
+
+    function log(msg, ok=null){
+      logEl.innerHTML = (ok===true? `<span class="ok">✅</span> ` : ok===false? `<span class="bad">❌</span> ` : '') + msg;
+    }
+
+    async function fetchRounds(){
+      try{
+        const qs = await getDocs(collection(db, 'rooms', ROOM_ID, 'rounds'));
+        roundIds = [];
+        qs.forEach(d=> roundIds.push(d.id));
+        roundIds.sort(); // cosmetic
+        roundCountEl.textContent = roundIds.length
+          ? `Rounds loaded: ${roundIds.length}`
+          : `No rounds found`;
+        return roundIds;
+      }catch(e){
+        roundCountEl.textContent = 'Failed to load rounds';
+        log(`Failed to read rounds: ${e.message||e.code}`, false);
+        throw e;
+      }
+    }
+
+    async function getCurrentRoundId(){
+      const roomRef = doc(db, 'rooms', ROOM_ID);
+      const snap = await getDoc(roomRef);
+      if (!snap.exists()) {
+        log('rooms/game1 does not exist.', false);
+        throw new Error('Missing room doc');
+      }
+      const d = snap.data() || {};
+      currentPill.textContent = `current: ${d.currentRoundId || '—'}`;
+      return d.currentRoundId || null;
+    }
+
+    function pickDifferentRandom(current, ids){
+      if (!ids.length) return null;
+      if (ids.length === 1) return ids[0];
+      let pick;
+      do { pick = ids[Math.floor(Math.random()*ids.length)]; } while (pick === current);
+      return pick;
+    }
+
+    async function setCurrentRound(id){
+      await updateDoc(doc(db,'rooms',ROOM_ID), { currentRoundId: id });
+      currentPill.textContent = `current: ${id}`;
+    }
+
+    nextBtn.addEventListener('click', async ()=>{
+      nextBtn.disabled = true;
+      log('Fetching rounds…');
+      try{
+        if (!roundIds.length) await fetchRounds();
+        if (!roundIds.length) { log('No rounds in rooms/game1/rounds.', false); return; }
+
+        const current = await getCurrentRoundId();
+        const next = pickDifferentRandom(current, roundIds);
+        if (!next) { log('Could not pick a round.', false); return; }
+
+        await setCurrentRound(next);
+        log(`Updated to round: ${next}`, true);
+      }catch(e){
+        log(`Error: ${e.message||e.code}`, false);
         console.error(e);
+      }finally{
+        nextBtn.disabled = false;
       }
     });
 
-    logEl.textContent = "✅ Ready – click to change round!";
+    // ---- Initial load ----
+    (async ()=>{
+      try{
+        await fetchRounds();
+        await getCurrentRoundId();
+        log('Ready — click the button to change the round.', true);
+      }catch(_e){
+        // fetchRounds already logged a detailed error
+      }
+    })();
   </script>
 </body>
 </html>
