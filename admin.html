@@ -31,12 +31,13 @@
       margin-top: 14px;
       font-size: 0.95rem;
       opacity: 0.8;
+      white-space: pre-line;
     }
   </style>
 </head>
 <body>
   <h1>⚙️ Admin Panel</h1>
-  <p>Click to start a 15-second round. A random face will appear for all players.</p>
+  <p>Click to start a 15-second round or reset the game (clears all scores).</p>
 
   <button id="nextBtn">🎲 Next (Random) Round</button>
   <button id="resetBtn">🔄 Reset Game</button>
@@ -46,7 +47,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
-      getFirestore, collection, getDocs, doc, updateDoc, getDoc, deleteDoc
+      getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, getDoc
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -65,6 +66,7 @@
     const resetBtn = document.getElementById("resetBtn");
     const status = document.getElementById("status");
 
+    /* ------------------ Next Random Round ------------------ */
     nextBtn.addEventListener("click", async () => {
       status.textContent = "Choosing random round...";
       const roundsCol = collection(db, "rooms", "game1", "rounds");
@@ -88,9 +90,37 @@
       status.textContent = `✅ Round started (${nextId}) — ends in 15s`;
     });
 
+    /* ------------------ Reset Game ------------------ */
     resetBtn.addEventListener("click", async () => {
-      await updateDoc(roomRef, { currentRoundId: null, roundEndsAt: 0 });
-      status.textContent = "Game reset.";
+      try {
+        status.textContent = "🧹 Resetting game...\nClearing player scores and guesses...";
+
+        // 1️⃣ Clear main room fields
+        await updateDoc(roomRef, { currentRoundId: null, roundEndsAt: 0 });
+
+        // 2️⃣ Delete all players
+        const playerCol = collection(db, "rooms", "game1", "Players");
+        const players = await getDocs(playerCol);
+        for (const p of players.docs) {
+          await deleteDoc(p.ref);
+        }
+
+        // 3️⃣ Delete all guess subcollections in each round
+        const roundsCol = collection(db, "rooms", "game1", "rounds");
+        const rounds = await getDocs(roundsCol);
+        for (const r of rounds.docs) {
+          const guessCol = collection(db, "rooms", "game1", "rounds", r.id, "guesses");
+          const guesses = await getDocs(guessCol);
+          for (const g of guesses.docs) {
+            await deleteDoc(g.ref);
+          }
+        }
+
+        status.textContent = "✅ Game fully reset.\nAll players and guesses cleared.";
+      } catch (err) {
+        console.error(err);
+        status.textContent = "❌ Reset failed. Check console.";
+      }
     });
   </script>
 </body>
