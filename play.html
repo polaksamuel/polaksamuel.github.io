@@ -171,6 +171,9 @@
     let phase = 'guess'; // 'guess' | 'reveal'
     let tStart = 0, tRemain = ROUND_DURATION_SEC, tHandle = null;
 
+    // NEW: cache the rendered guesses so we can reveal instantly on phase flip
+    let guessesHTML = 'No guesses this round.';
+
     /* ---------- HELPERS ---------- */
     function normalizeCrop(c) {
       const x = parseFloat(c?.xPct), y = parseFloat(c?.yPct);
@@ -224,10 +227,10 @@
       tRemain = ROUND_DURATION_SEC;
       timerPill.textContent = `⏳ ${tRemain}s`;
       setPhase('guess');
-      submitBtn.disabled = false;
-      answerInput.disabled = false;
-      feedback.textContent = '';
-      if (unsubGuesses) { /* keep sub but hide until reveal */ }
+      submitBtn.disabled = alreadyGuessed ? true : false;
+      answerInput.disabled = alreadyGuessed ? true : false;
+      feedback.textContent = alreadyGuessed ? 'You already guessed this round. Waiting for reveal…' : '';
+      answersWrap.textContent = 'Hidden until reveal…';
       tHandle = setInterval(()=>{
         const elapsed = Math.floor((Date.now()-tStart)/1000);
         const left = Math.max(ROUND_DURATION_SEC - elapsed, 0);
@@ -239,20 +242,13 @@
           setPhase('reveal');
           submitBtn.disabled = true;
           answerInput.disabled = true;
-          // show guesses list
-          renderGuesses(true);
+          // Immediately show whatever guesses we have so far
+          answersWrap.innerHTML = guessesHTML || 'No guesses this round.';
         }
       }, 200);
     }
 
     /* ---------- RENDER ---------- */
-    function renderGuesses(show){
-      // We build from cached DOM content populated by the guesses listener
-      // If not revealed yet, keep placeholder
-      if (!show){
-        answersWrap.textContent = 'Hidden until reveal…';
-      }
-    }
     function renderLeaderboard(list){
       if (!list.length){ leaderWrap.textContent = 'No scores yet.'; return; }
       const rows = list
@@ -301,22 +297,20 @@
       const myGuessRef = doc(db, "rooms", ROOM_ID, "rounds", roundId, "guesses", playerId);
       const myGuessSnap = await getDoc(myGuessRef);
       alreadyGuessed = myGuessSnap.exists();
-      submitBtn.disabled = alreadyGuessed;
-      if (alreadyGuessed){ feedback.textContent = 'You already guessed this round. Waiting for reveal…'; }
 
-      // guesses live (we show only after reveal)
+      // guesses live (build HTML; reveal immediately if phase is reveal)
       if (unsubGuesses) unsubGuesses();
       const guessesCol = collection(db, "rooms", ROOM_ID, "rounds", roundId, "guesses");
       unsubGuesses = subColSnapshot(guessesCol, (qs)=>{
         const rows = [];
         qs.forEach(docSnap=>{
           const g = docSnap.data();
-          // decorate for reveal display
           const cls = g.kind==='exact' ? 'ok' : g.kind==='fuzzy' ? 'fuzzy' : 'bad';
           rows.push(`<li><span class="${cls}">${g.name||'Player'}: ${g.guess||'(blank)'}</span> ${g.kind==='exact'?'✅':g.kind==='fuzzy'?'🟨':'❌'} <span class="sub">(${(g.points||0)} pts)</span></li>`);
         });
-        if (phase==='reveal'){
-          answersWrap.innerHTML = rows.length ? `<ul>${rows.join('')}</ul>` : 'No guesses this round.';
+        guessesHTML = rows.length ? `<ul>${rows.join('')}</ul>` : 'No guesses this round.';
+        if (phase === 'reveal'){
+          answersWrap.innerHTML = guessesHTML;
         }else{
           answersWrap.textContent = 'Hidden until reveal…';
         }
@@ -324,6 +318,10 @@
 
       // reset UI + start 15s timer on each new round
       answerInput.value = '';
+      submitBtn.disabled = alreadyGuessed;
+      answerInput.disabled = alreadyGuessed;
+      feedback.textContent = alreadyGuessed ? 'You already guessed this round. Waiting for reveal…' : '';
+      setPhase('guess');
       startTimer();
     }
 
