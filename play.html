@@ -7,6 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root{ --bg:#0b0e1a; --ink:#e9ecff; --card:#131735; --rim:#2b3170; --brand:#38d3ff; }
+    *{box-sizing:border-box}
     body{font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink);
          display:flex;flex-direction:column;align-items:center;padding:20px}
     .card{background:var(--card);border:1px solid var(--rim);border-radius:20px;
@@ -25,10 +26,11 @@
     th{border-bottom:1px solid var(--rim);font-weight:700}
     .tag{display:inline-block;padding:4px 8px;border-radius:999px;background:rgba(255,255,255,.08);
          border:1px solid rgba(255,255,255,.12);font-size:.8rem}
-    #devBox{display:none;margin-top:16px;background:#222;padding:14px;border-radius:12px}
+    #devBox{display:none;margin-top:16px;background:#1b1e2d;padding:14px;border-radius:12px;border:1px solid #2b3170}
     #devBox label{display:block;margin:8px 0 4px}
     #devBox input[type="range"]{width:100%}
     #jsonOut{background:#111;color:#c9f0ff;padding:10px;border-radius:8px;overflow:auto}
+    #saveRoundBox{display:none}
     #dbg{position:fixed;left:12px;bottom:12px;background:#111;color:#9fe;padding:8px 10px;
          border:1px solid #2b3170;border-radius:10px;font:12px/1.2 monospace;max-width:70vw;opacity:.9;display:none}
   </style>
@@ -65,6 +67,7 @@
       </table>
     </div>
 
+    <!-- DEV CROPPER -->
     <div id="devBox">
       <h3 style="margin:0 0 10px">🔧 Dev crop controls (open page with <code>?dev=1</code>)</h3>
       <label>xPct <input id="xPct" type="range" min="0" max="1" step="0.01" value="0"></label>
@@ -73,6 +76,26 @@
       <label>hPct <input id="hPct" type="range" min="0.05" max="1" step="0.01" value="1"></label>
       <div style="margin-top:8px">Copy into Firestore <code>crop</code> map:</div>
       <pre id="jsonOut">{ "xPct": 0, "yPct": 0, "wPct": 1, "hPct": 1 }</pre>
+    </div>
+
+    <!-- SAVE ROUND HELPER (DEV ONLY) -->
+    <div id="saveRoundBox" style="display:none;margin-top:16px;background:#1b1e2d;padding:14px;border-radius:12px;border:1px solid #2b3170">
+      <h3 style="margin:0 0 10px">💾 Save this crop as a new round</h3>
+      <div style="display:grid;gap:10px;grid-template-columns:1fr 1fr">
+        <label>Answer
+          <input id="sr-answer" placeholder="e.g., Rosaline Abraham" style="width:100%;padding:8px;border-radius:8px;border:none;margin-top:6px">
+        </label>
+        <label>pageImage URL
+          <input id="sr-img" placeholder="https://weha07boyoz.com/page01.png" style="width:100%;padding:8px;border-radius:8px;border:none;margin-top:6px">
+        </label>
+      </div>
+      <div style="margin-top:8px;font-size:.9rem;opacity:.8">
+        New round ID will auto-pick the next like <code>r00X</code>.
+      </div>
+      <button id="sr-save" style="margin-top:12px;padding:10px 14px;border-radius:10px;border:none;background:#38d3ff;color:#001022;font-weight:700;cursor:pointer">
+        Save round
+      </button>
+      <span id="sr-status" style="margin-left:10px;opacity:.85"></span>
     </div>
   </div>
 
@@ -113,6 +136,7 @@
     const isAdmin = params.has('admin');
     if (dev) dbg.style.display = 'block';
     if (params.has('dev')) document.getElementById('devBox').style.display = 'block';
+    if (params.has('dev')) document.getElementById('saveRoundBox').style.display = 'block';
     if (isAdmin) nextBtn.style.display = 'inline-block';
 
     // Dev sliders
@@ -122,13 +146,20 @@
     const hSlider = document.getElementById('hPct');
     const jsonOut = document.getElementById('jsonOut');
 
+    // Save round helper els
+    const saveBox = document.getElementById('saveRoundBox');
+    const srAnswer = document.getElementById('sr-answer');
+    const srImg = document.getElementById('sr-img');
+    const srBtn = document.getElementById('sr-save');
+    const srStatus = document.getElementById('sr-status');
+
     // identity
     let playerId = localStorage.getItem('playerId'); if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
     let playerName = localStorage.getItem('playerName'); if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
 
     const roomRef = doc(db, "rooms", "game1");
 
-    let dataCache = null;     // { crop, answer }
+    let dataCache = null;     // { crop, answer, pageImage }
     let imgCache = null;      // HTMLImageElement
     let devPreviewCrop = null;
     let unsubscribeRound = null;
@@ -219,7 +250,7 @@
 
       try {
         const img = await loadImage(url);
-        dataCache = { crop: normalizeCrop(d.crop), answer: d.answer };
+        dataCache = { crop: normalizeCrop(d.crop), answer: d.answer, pageImage: url };
         imgCache = img;
         hydrateSlidersFrom(dataCache.crop);
         draw();
@@ -237,9 +268,9 @@
         log("[ROUND UPDATE]", { roundId, url: u2, crop: d2.crop, answer: d2.answer });
         try {
           const img2 = await loadImage(u2);
-          dataCache = { crop: normalizeCrop(d2.crop), answer: d2.answer };
+          dataCache = { crop: normalizeCrop(d2.crop), answer: d2.answer, pageImage: u2 };
           imgCache = img2;
-          draw(); // don't re-hydrate sliders here; keep your dev preview if you moved them
+          draw(); // keep your dev preview if you moved them
         } catch(e) {
           log("[IMG FAIL UPDATE]", e.message);
         }
@@ -258,7 +289,6 @@
       if (room.currentRoundId) {
         await subscribeToRound(room.currentRoundId);
       } else {
-        // If no currentRoundId, you could optionally fall back to legacy fields here.
         log("[NO currentRoundId] Set rooms/game1.currentRoundId to a round id.");
       }
     });
@@ -311,6 +341,67 @@
       await updateDoc(roomRef, { currentRoundId: nextId });
     }
     nextBtn?.addEventListener('click', goToRandomRound);
+
+    /* ---------- Dev "Save round" helper ---------- */
+    async function getNextRoundId() {
+      const qs = await getDocs(collection(db, "rooms", "game1", "rounds"));
+      let max = 0;
+      qs.forEach(d => {
+        const m = /^r(\d+)$/.exec(d.id);
+        if (m) max = Math.max(max, parseInt(m[1], 10));
+      });
+      const n = (max + 1).toString().padStart(3, '0');
+      return `r${n}`;
+    }
+
+    if (dev && saveBox) {
+      // Prefill image from current round when available
+      const tryFillImg = () => {
+        if (!srImg.value) {
+          const guess = dataCache?.pageImage || '';
+          srImg.value = guess || 'https://weha07boyoz.com/page01.png';
+        }
+      };
+      tryFillImg();
+      const fillInterval = setInterval(() => {
+        if (dataCache?.pageImage) { tryFillImg(); clearInterval(fillInterval); }
+      }, 300);
+
+      srBtn?.addEventListener('click', async () => {
+        try {
+          const answer = (srAnswer.value || '').trim();
+          const pageImage = (srImg.value || '').trim();
+          if (!answer || !pageImage) {
+            srStatus.textContent = 'Answer and image URL required';
+            return;
+          }
+          const crop = (devPreviewCrop || dataCache?.crop);
+          if (!crop) {
+            srStatus.textContent = 'No crop available (move sliders first)';
+            return;
+          }
+          const newId = await getNextRoundId();
+          await setDoc(doc(db, "rooms", "game1", "rounds", newId), {
+            pageImage,
+            answer,
+            crop: {
+              xPct: Number(crop.xPct),
+              yPct: Number(crop.yPct),
+              wPct: Number(crop.wPct),
+              hPct: Number(crop.hPct),
+            }
+          });
+          // optional: switch immediately
+          // await updateDoc(roomRef, { currentRoundId: newId });
+
+          srStatus.textContent = `Saved as ${newId} ✅`;
+          srAnswer.value = '';
+        } catch (e) {
+          console.error(e);
+          srStatus.textContent = 'Save failed (check rules / console)';
+        }
+      });
+    }
   </script>
 </body>
 </html>
