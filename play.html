@@ -3,57 +3,97 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>WeHa 07 Boyoz – Game</title>
+  <title>🧩 Guess Who?</title>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
     :root{ --bg:#0b0e1a; --ink:#e9ecff; --card:#131735; --rim:#2b3170; --brand:#38d3ff; }
+    *{box-sizing:border-box}
     body{font-family:Poppins,system-ui,sans-serif;background:var(--bg);color:var(--ink);
          display:flex;flex-direction:column;align-items:center;padding:20px}
+    .wrap{max-width:920px;width:100%}
     .card{background:var(--card);border:1px solid var(--rim);border-radius:20px;
-          padding:26px;max-width:900px;width:100%;text-align:center;
-          box-shadow:0 22px 50px rgba(0,0,0,.28)}
-    h1{margin:0 0 16px}
+          padding:22px; text-align:left;
+          box-shadow:0 22px 50px rgba(0,0,0,.28); margin:0 auto}
+    h1{margin:0 0 16px;text-align:center}
+    h2{margin:0 0 10px}
     .stage{background:#0c0f22;border-radius:14px;padding:18px}
     canvas{width:100%; max-width:820px; height:auto; border-radius:12px; background:#0a0d20}
-    input{width:90%;padding:10px;margin-top:14px;border-radius:10px;border:none}
-    button{margin-top:14px;padding:12px 18px;border-radius:14px;border:none;
+    input[type="text"]{width:100%;padding:10px;border-radius:10px;border:none;background:#0f1330;color:#e9ecff}
+    button{padding:10px 14px;border-radius:12px;border:none;
            background:var(--brand);color:#001022;font-weight:700;cursor:pointer}
-    .feedback{margin-top:10px;font-weight:600}
-    #leaderboard{margin-top:18px;text-align:left}
-    #leaderboard ul{list-style:none;margin:0;padding:0}
-    #leaderboard li{margin:4px 0}
+    .row{display:flex;gap:10px;align-items:center}
+    .row > * {flex:1}
+    .muted{opacity:.85;font-size:.92rem}
+    hr{border:none;border-top:1px solid rgba(255,255,255,.08);margin:14px 0}
+    ul{margin:6px 0 0 18px}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:#0f1330;border:1px solid #2b3170}
+    /* Dev area */
+    #devPanel{display:none;margin-top:18px}
+    #devPanel .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    #devPanel input[type="range"]{width:100%}
+    #jsonOut{background:#0f1330;border:1px solid #2b3170;color:#c9f0ff;padding:10px;border-radius:10px;white-space:pre-wrap}
+    .stack{display:flex;flex-direction:column;gap:8px}
+    .good{color:#79ffa8}
+    .bad{color:#ff8080}
   </style>
 </head>
 <body>
-  <h1>📝 Guess Who?</h1>
-  <div class="card">
-    <div id="roundTimer" style="font-weight:700;margin-bottom:10px;">⏱ waiting...</div>
+  <div class="wrap">
+    <h1>🧩 Guess Who?</h1>
 
-    <div class="stage">
-      <canvas id="canvas" width="820" height="520"></canvas>
-    </div>
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:6px">
+        <h2 id="q">Who is this?</h2>
+        <span class="pill" id="roundBadge">round: —</span>
+      </div>
 
-    <input id="answer" placeholder="Type your guess here">
-    <div>
-      <button id="submitBtn">Submit</button>
-    </div>
-    <div id="feedback" class="feedback"></div>
+      <div class="stage"><canvas id="canvas" width="820" height="520"></canvas></div>
 
-    <div id="revealBox" style="display:none;text-align:left;margin-top:18px">
-      <h3>📝 All Answers</h3>
-      <ul id="revealList" style="margin:0;padding-left:18px"></ul>
-    </div>
+      <div class="row" style="margin-top:10px">
+        <input id="guessInput" type="text" placeholder="Type your guess here">
+        <button id="submitBtn" style="flex:0 0 auto">Submit</button>
+      </div>
 
-    <div id="leaderboard" style="display:none;">
+      <div id="feedback" class="muted" style="min-height:22px;margin-top:6px"></div>
+
+      <hr>
+      <h3>🗒️ All Answers</h3>
+      <div id="answers">No guesses this round.</div>
+
+      <hr>
       <h3>🏆 Leaderboard</h3>
-      <ul id="leaderList"></ul>
+      <div id="board">No scores yet.</div>
+
+      <!-- DEV TOOLS (open page with ?dev=1) -->
+      <div id="devPanel">
+        <hr>
+        <h3>🛠️ Dev crop tools</h3>
+        <div class="grid">
+          <div class="stack">
+            <label>xPct <input id="xPct" type="range" min="0" max="1" step="0.01" value="0"></label>
+            <label>yPct <input id="yPct" type="range" min="0" max="1" step="0.01" value="0"></label>
+            <label>wPct <input id="wPct" type="range" min="0.05" max="1" step="0.01" value="1"></label>
+            <label>hPct <input id="hPct" type="range" min="0.05" max="1" step="0.01" value="1"></label>
+          </div>
+          <div class="stack">
+            <label>Answer <input id="devAnswer" type="text" placeholder="Correct answer"></label>
+            <label>pageImage URL <input id="devImage" type="text" placeholder="https://weha07boyoz.com/page01.png"></label>
+            <button id="saveRoundBtn">💾 Save this crop as a new round</button>
+            <div class="muted">New ID auto-picks the next <code>r00x</code>.</div>
+          </div>
+        </div>
+        <div style="margin-top:10px">Copyable crop JSON:</div>
+        <pre id="jsonOut">{ "xPct": 0, "yPct": 0, "wPct": 1, "hPct": 1 }</pre>
+        <div class="muted" id="devNote"></div>
+      </div>
     </div>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
-      getFirestore, doc, onSnapshot, getDoc, setDoc, getDocs, collection, updateDoc
+      getFirestore, doc, onSnapshot, getDoc, setDoc, updateDoc, addDoc,
+      collection, getDocs, onSnapshot as subColSnapshot, serverTimestamp
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
     /* ---------- Firebase ---------- */
@@ -66,158 +106,206 @@
       appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
     };
     const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+    const db  = getFirestore(app);
+    const ROOM_ID = "game1";
+    const roomRef = doc(db, "rooms", ROOM_ID);
 
-    /* ---------- Elements ---------- */
+    /* ---------- UI refs ---------- */
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const answerInput = document.getElementById('answer');
-    const feedback = document.getElementById('feedback');
-    const timerEl = document.getElementById('roundTimer');
-    const revealBox = document.getElementById('revealBox');
-    const revealList = document.getElementById('revealList');
-    const leaderBox = document.getElementById('leaderboard');
-    const leaderList = document.getElementById('leaderList');
+    const qEl = document.getElementById('q');
+    const roundBadge = document.getElementById('roundBadge');
+    const guessInput = document.getElementById('guessInput');
     const submitBtn = document.getElementById('submitBtn');
+    const answersEl = document.getElementById('answers');
+    const boardEl   = document.getElementById('board');
+    const feedback  = document.getElementById('feedback');
 
-    /* ---------- Player identity ---------- */
+    /* DEV refs */
+    const params = new URLSearchParams(location.search);
+    const isDev = params.has('dev');
+    const devPanel = document.getElementById('devPanel');
+    const xSlider = document.getElementById('xPct');
+    const ySlider = document.getElementById('yPct');
+    const wSlider = document.getElementById('wPct');
+    const hSlider = document.getElementById('hPct');
+    const jsonOut = document.getElementById('jsonOut');
+    const devAnswer = document.getElementById('devAnswer');
+    const devImage  = document.getElementById('devImage');
+    const saveRoundBtn = document.getElementById('saveRoundBtn');
+    const devNote = document.getElementById('devNote');
+    if (isDev) devPanel.style.display = 'block';
+
+    /* ---------- Identity ---------- */
     let playerId = localStorage.getItem('playerId');
     if (!playerId) { playerId = crypto.randomUUID(); localStorage.setItem('playerId', playerId); }
     let playerName = localStorage.getItem('playerName');
     if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localStorage.setItem('playerName', playerName); }
 
-    /* ---------- Global state ---------- */
-    const roomRef = doc(db, "rooms", "game1");
-    let currentRoundId = null;
-    let roundEndsAt = 0;
-    let tickInt = null;
-    let imgCache = null;
-    let submitted = false;
+    /* ---------- State ---------- */
+    let roundState = { id:null, answer:"", crop:{xPct:0,yPct:0,wPct:1,hPct:1}, pageImage:"" };
+    let roundImg = null;
+    let unsubGuesses = null;
 
     /* ---------- Helpers ---------- */
-    function normalizeCrop(c){ return {xPct:+(c?.xPct||0), yPct:+(c?.yPct||0), wPct:+(c?.wPct||1), hPct:+(c?.hPct||1)}; }
-    async function loadImage(url){
-      return new Promise((res,rej)=>{
-        const i=new Image();
-        i.onload=()=>res(i);
-        i.onerror=()=>rej("img fail");
-        i.src=url;
-      });
-    }
-    async function drawCrop(d){
-      const url = d.pageImage || "";
-      const crop = normalizeCrop(d.crop);
-      try {
-        const img = await loadImage(url);
-        imgCache = img;
-        ctx.clearRect(0,0,canvas.width,canvas.height);
-        const W=img.naturalWidth,H=img.naturalHeight;
-        const sx=crop.xPct*W, sy=crop.yPct*H, sw=crop.wPct*W, sh=crop.hPct*H;
-        ctx.drawImage(img,sx,sy,sw,sh,0,0,canvas.width,canvas.height);
-      } catch(e){ console.error(e); }
-    }
-
-    /* ---------- Fuzzy match ---------- */
-    function _norm(s){return (s||"").toLowerCase().trim().replace(/\s+/g," ");}
+    const norm = s => (s||"").toLowerCase().trim().replace(/\s+/g," ");
     function levenshtein(a,b){
-      const m=[];for(let i=0;i<=b.length;i++)m[i]=[i];for(let j=0;j<=a.length;j++)m[0][j]=j;
-      for(let i=1;i<=b.length;i++){for(let j=1;j<=a.length;j++){
-        m[i][j]=b[i-1]===a[j-1]?m[i-1][j-1]:Math.min(m[i-1][j-1]+1,m[i][j-1]+1,m[i-1][j]+1);
-      }}return m[b.length][a.length];
+      const m=[]; for(let i=0;i<=b.length;i++) m[i]=[i]; for(let j=0;j<=a.length;j++) m[0][j]=j;
+      for(let i=1;i<=b.length;i++){ for(let j=1;j<=a.length;j++){
+        m[i][j]= b[i-1]===a[j-1] ? m[i-1][j-1] : Math.min(m[i-1][j-1]+1,m[i][j-1]+1,m[i-1][j]+1);
+      }} return m[b.length][a.length];
     }
-    function fuzzyScore(correct, guess){
-      const t=_norm(correct), g=_norm(guess);
-      if(!t||!g)return 0;
-      if(t===g)return 1;
-      const d=levenshtein(t,g);
-      return d<=2?0.5:0;
+    function scoreGuess(answer, guess){
+      const A = norm(answer), G = norm(guess);
+      if (!A || !G) return {pts:0, exact:false, fuzzy:false};
+      if (A === G) return {pts:2, exact:true, fuzzy:false};                 // exact 2
+      if (levenshtein(A,G) <= 2) return {pts:1, exact:false, fuzzy:true};   // fuzzy 1
+      return {pts:0, exact:false, fuzzy:false};
     }
-
-    /* ---------- Timer ---------- */
-    function startTimer(){
-      if(tickInt)clearInterval(tickInt);
-      tickInt=setInterval(()=>{
-        const left=Math.max(0,roundEndsAt-Date.now());
-        const s=Math.ceil(left/1000);
-        timerEl.textContent=left>0?`⏱ ${s}s left`:"⏱ Reveal!";
-        if(left<=0){clearInterval(tickInt);tickInt=null;revealGuesses();}
-      },300);
+    function clampCrop(c){
+      let {xPct=0,yPct=0,wPct=1,hPct=1} = c||{};
+      xPct=+xPct||0; yPct=+yPct||0; wPct=+wPct||1; hPct=+hPct||1;
+      wPct=Math.min(wPct, 1-xPct); hPct=Math.min(hPct, 1-yPct);
+      return {xPct,yPct,wPct,hPct};
     }
+    function imgFrom(url){ return new Promise((res,rej)=>{ const i=new Image(); i.onload=()=>res(i); i.onerror=()=>rej(new Error('img load fail '+url)); i.src=url; }); }
 
-    /* ---------- Reveal guesses ---------- */
-    async function revealGuesses(){
-      if(!currentRoundId)return;
-      const roundSnap = await getDoc(doc(db,"rooms","game1","rounds",currentRoundId));
-      const correctAnswer = (roundSnap.exists() && roundSnap.data().answer) ? roundSnap.data().answer : "";
-
-      const gCol = collection(db,"rooms","game1","rounds",currentRoundId,"guesses");
-      const qs = await getDocs(gCol);
-      const out=[];
-
-      for (const d of qs.docs){
-        const v = d.data();
-        const guess=(v.guess||"").trim();
-        const pts=fuzzyScore(correctAnswer,guess);
-        const mark = pts===1?"✅":pts===0.5?"🟡":"❌";
-        out.push(`<li>${v.name||"Player"}: "${guess}" ${mark} (${pts} pts)</li>`);
-
-        // Update player total score
-        const pRef = doc(db,"rooms","game1","Players",d.id);
-        const pSnap = await getDoc(pRef);
-        const prev = (pSnap.exists() && pSnap.data().score) ? pSnap.data().score : 0;
-        await setDoc(pRef,{name:v.name||"Player",score:prev+pts},{merge:true});
-      }
-
-      revealList.innerHTML = out.length ? out.join("") : "<li>No guesses this round.</li>";
-      revealBox.style.display='block';
-      updateLeaderboard();
+    function draw(){
+      if (!roundImg) return;
+      const {xPct,yPct,wPct,hPct} = clampCrop(isDev ? {
+        xPct:+xSlider.value, yPct:+ySlider.value, wPct:+wSlider.value, hPct:+hSlider.value
+      } : roundState.crop);
+      const W=roundImg.naturalWidth, H=roundImg.naturalHeight;
+      const sx=Math.round(xPct*W), sy=Math.round(yPct*H);
+      const sw=Math.max(1,Math.round(wPct*W)), sh=Math.max(1,Math.round(hPct*H));
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      ctx.imageSmoothingQuality="high";
+      ctx.drawImage(roundImg, sx,sy,sw,sh, 0,0, canvas.width,canvas.height);
     }
 
-    /* ---------- Leaderboard ---------- */
-    async function updateLeaderboard(){
-      const pCol = collection(db,"rooms","game1","Players");
-      const ps = await getDocs(pCol);
-      const arr=[];
-      ps.forEach(p=>{
-        const v=p.data();
-        arr.push({n:v.name||"Player",s:v.score||0});
+    function hydrateDev(crop, ans, img){
+      if (!isDev) return;
+      xSlider.value = crop.xPct ?? 0;
+      ySlider.value = crop.yPct ?? 0;
+      wSlider.value = crop.wPct ?? 1;
+      hSlider.value = crop.hPct ?? 1;
+      devAnswer.value = ans || "";
+      devImage.value  = img || "";
+      jsonOut.textContent = JSON.stringify(clampCrop({
+        xPct:+xSlider.value,yPct:+ySlider.value,wPct:+wSlider.value,hPct:+hSlider.value
+      }), null, 2);
+    }
+    [xSlider,ySlider,wSlider,hSlider].forEach(sl => sl?.addEventListener('input', ()=>{
+      jsonOut.textContent = JSON.stringify(clampCrop({
+        xPct:+xSlider.value,yPct:+ySlider.value,wPct:+wSlider.value,hPct:+hSlider.value
+      }), null, 2);
+      draw();
+    }));
+
+    /* ---------- Room sub: choose active round ---------- */
+    onSnapshot(roomRef, async (snap)=>{
+      if (!snap.exists()) return;
+      const room = snap.data();
+      qEl.textContent = room.question || "Who is this?";
+      const id = room.currentRoundId;
+      roundBadge.textContent = "round: " + (id || "—");
+      if (!id) { roundImg=null; ctx.clearRect(0,0,canvas.width,canvas.height); return; }
+
+      const rRef = doc(db, "rooms", ROOM_ID, "rounds", id);
+      const rSnap = await getDoc(rRef);
+      if (!rSnap.exists()) return;
+
+      const r = rSnap.data();
+      roundState = {
+        id, answer: r.answer || "", crop: clampCrop(r.crop),
+        pageImage: (/^https?:/.test(r.pageImage)? r.pageImage : (r.pageImage||"").replace(/^\/+/,""))
+      };
+
+      try{
+        roundImg = await imgFrom(roundState.pageImage);
+        draw();
+        hydrateDev(roundState.crop, roundState.answer, roundState.pageImage);
+      }catch(e){ console.error(e); }
+      subGuesses(id);
+    });
+
+    /* ---------- Guesses sub for current round ---------- */
+    function subGuesses(roundId){
+      if (unsubGuesses) unsubGuesses();
+      const gCol = collection(db, "rooms", ROOM_ID, "rounds", roundId, "guesses");
+      unsubGuesses = subColSnapshot(gCol, (qs)=>{
+        const items = [];
+        qs.forEach(d=>{
+          const g=d.data();
+          items.push(`<li> <strong>${(g.name||'Player')}</strong>: “${(g.text||'').replace(/</g,'&lt;')}” ${g.exact?'✅':g.fuzzy?'🟡':''} <span class="muted">(${g.pts||0} pts)</span></li>`);
+        });
+        answersEl.innerHTML = items.length ? `<ul>${items.join('')}</ul>` : "No guesses this round.";
       });
-      arr.sort((a,b)=>b.s-a.s);
-      leaderList.innerHTML = arr.map(p=>`<li>${p.n}: ${p.s.toFixed(1)} pts</li>`).join("")||"<li>No scores yet.</li>";
-      leaderBox.style.display='block';
     }
 
     /* ---------- Submit guess ---------- */
-    submitBtn.addEventListener("click",async()=>{
-      if(!currentRoundId)return alert("No active round!");
-      if(Date.now()>=roundEndsAt)return alert("Time is up!");
-      if(submitted)return alert("You already guessed!");
-      const guess=(answerInput.value||"").trim();
-      if(!guess)return;
-      const gRef=doc(db,"rooms","game1","rounds",currentRoundId,"guesses",playerId);
-      await setDoc(gRef,{name:playerName,guess,ts:Date.now()});
-      submitted=true;
-      feedback.textContent="✅ Guess saved!";
-      setTimeout(()=>feedback.textContent="",1200);
-      answerInput.value="";
+    submitBtn.addEventListener('click', async ()=>{
+      const text = (guessInput.value||"").trim();
+      if (!text || !roundState.id) return;
+      const {pts,exact,fuzzy} = scoreGuess(roundState.answer, text);
+
+      // 1) write guess to round
+      const gRef = doc(db, "rooms", ROOM_ID, "rounds", roundState.id, "guesses", playerId);
+      await setDoc(gRef, { uid: playerId, name: playerName, text, pts, exact, fuzzy, ts: serverTimestamp() }, {merge:true});
+
+      // 2) update overall player score
+      const pRef = doc(db, "rooms", ROOM_ID, "Players", playerId);
+      const pSnap = await getDoc(pRef);
+      const prev = (pSnap.exists() && typeof pSnap.data().score==="number") ? pSnap.data().score : 0;
+      await setDoc(pRef, { name: playerName, score: prev + pts, lastGuess: text, lastPts: pts, ts: Date.now() }, {merge:true});
+
+      feedback.innerHTML = pts>0 ? `<span class="good">+${pts} pts</span>` : `<span class="bad">0 pts</span>`;
+      guessInput.value = "";
+      setTimeout(()=> feedback.textContent="", 1200);
     });
 
-    /* ---------- Subscribe to room ---------- */
-    onSnapshot(roomRef,async(snap)=>{
-      if(!snap.exists())return;
-      const d=snap.data();
-      currentRoundId=d.currentRoundId||null;
-      roundEndsAt=Number(d.roundEndsAt||0);
-      submitted=false;
-      revealBox.style.display='none';
-      revealList.innerHTML='';
-      leaderBox.style.display='none';
-      if(currentRoundId){
-        const rRef=doc(db,"rooms","game1","rounds",currentRoundId);
-        const rd=await getDoc(rRef);
-        if(rd.exists())await drawCrop(rd.data());
+    /* ---------- Leaderboard live ---------- */
+    subColSnapshot(collection(db, "rooms", ROOM_ID, "Players"), (qs)=>{
+      const arr=[];
+      qs.forEach(d=> arr.push(d.data()));
+      arr.sort((a,b)=> (b.score||0)-(a.score||0));
+      boardEl.innerHTML = arr.length
+        ? `<ul>${arr.map(p=>`<li>${(p.name||'Player')}: ${(p.score||0)} pts</li>`).join('')}</ul>`
+        : "No scores yet.";
+    });
+
+    /* ---------- DEV: save new round ---------- */
+    async function nextRoundId(){
+      const col = collection(db, "rooms", ROOM_ID, "rounds");
+      const qs = await getDocs(col);
+      let max = 0;
+      qs.forEach(d=>{
+        const m = /^r(\d+)$/.exec(d.id);
+        if (m) { const n=+m[1]; if (n>max) max=n; }
+      });
+      const n = max + 1;
+      return "r" + String(n).padStart(3, "0");
+    }
+
+    saveRoundBtn?.addEventListener('click', async ()=>{
+      try{
+        const crop = clampCrop({ xPct:+xSlider.value, yPct:+ySlider.value, wPct:+wSlider.value, hPct:+hSlider.value });
+        const answer = (devAnswer.value||"").trim();
+        const pageImage = (devImage.value||"").trim();
+        if (!answer || !pageImage) { devNote.textContent = "Provide answer and pageImage."; return; }
+
+        const newId = await nextRoundId();
+        const rRef = doc(db, "rooms", ROOM_ID, "rounds", newId);
+        await setDoc(rRef, { answer, pageImage, crop }, { merge:false });
+
+        // switch to preview the new round
+        await updateDoc(roomRef, { currentRoundId: newId });
+
+        devNote.textContent = `✅ Saved ${newId}. If you see a rules error, allow write on /rooms/game1/rounds/* while dev’ing.`;
+      }catch(e){
+        console.error(e);
+        devNote.textContent = "❌ Save failed. Check rules / console.";
       }
-      if(roundEndsAt)startTimer();
     });
   </script>
 </body>
