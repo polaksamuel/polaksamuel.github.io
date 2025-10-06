@@ -1,46 +1,54 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Admin · Guess Who?</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeHa 07 Boyoz – Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
   <style>
-    :root{ --bg:#0b0e1a; --ink:#e9ecff; --card:#131735; --rim:#2b3170; --brand:#38d3ff; --muted:#aab5ff; }
-    *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--ink);font-family:Poppins,system-ui,sans-serif}
-    .wrap{max-width:880px;margin:40px auto;padding:0 18px}
-    .card{background:var(--card);border:1px solid var(--rim);border-radius:20px;padding:24px;box-shadow:0 22px 50px rgba(0,0,0,.28)}
-    h1{margin:0 0 16px;font-weight:800}
-    .btn{cursor:pointer;border:none;border-radius:12px;padding:12px 18px;font-weight:700;background:var(--brand);color:#001022}
-    .row{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
-    .pill{display:inline-block;border:1px solid var(--rim);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:.9rem}
-    .muted{color:var(--muted)}
-    .log{margin-top:16px;font:12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;background:#0d1024;border:1px solid #293170;border-radius:10px;padding:10px;max-height:240px;overflow:auto;white-space:pre-wrap}
+    body {
+      font-family: Poppins, system-ui, sans-serif;
+      background: #0b0e1a;
+      color: #e9ecff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    button {
+      margin: 10px;
+      padding: 12px 20px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      background: #38d3ff;
+      color: #001022;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 14px;
+      font-size: 0.95rem;
+      opacity: 0.8;
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div class="card">
-      <h1>🎮 Admin Controls</h1>
-      <div class="row" style="margin:10px 0 16px">
-        <button id="nextBtn" class="btn" disabled>Next (Random Round)</button>
-        <span id="roundCount" class="pill">Loading rounds…</span>
-        <span id="current" class="pill">current: —</span>
-      </div>
-      <div class="muted">This sets <code>rooms/game1.currentRoundId</code> for everyone.</div>
-      <div id="log" class="log"></div>
-    </div>
-  </div>
+  <h1>⚙️ Admin Panel</h1>
+  <p>Click to start a 15-second round. A random face will appear for all players.</p>
+
+  <button id="nextBtn">🎲 Next (Random) Round</button>
+  <button id="resetBtn">🔄 Reset Game</button>
+
+  <div id="status">Fetching rounds...</div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
-      getFirestore, doc, getDoc, updateDoc, onSnapshot,
-      collection, getDocs
+      getFirestore, collection, getDocs, doc, updateDoc, getDoc, deleteDoc
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
-    // ---------- SAME CONFIG AS play.html ----------
     const firebaseConfig = {
       apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
       authDomain: "weha07boyoz-game.firebaseapp.com",
@@ -51,70 +59,39 @@
     };
 
     const app = initializeApp(firebaseConfig);
-    const db  = getFirestore(app);
+    const db = getFirestore(app);
+    const roomRef = doc(db, "rooms", "game1");
+    const nextBtn = document.getElementById("nextBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const status = document.getElementById("status");
 
-    const roomRef   = doc(db, "rooms", "game1");
-    const roundsCol = collection(db, "rooms", "game1", "rounds");
+    nextBtn.addEventListener("click", async () => {
+      status.textContent = "Choosing random round...";
+      const roundsCol = collection(db, "rooms", "game1", "rounds");
+      const qs = await getDocs(roundsCol);
+      const ids = qs.docs.map(d => d.id);
+      if (!ids.length) return alert("No rounds found!");
 
-    const nextBtn   = document.getElementById('nextBtn');
-    const roundCtEl = document.getElementById('roundCount');
-    const currentEl = document.getElementById('current');
-    const logEl     = document.getElementById('log');
-
-    const log = (...a)=>{ const s=a.map(x=>typeof x==='object'?JSON.stringify(x):String(x)).join(' '); logEl.textContent += s+"\n"; console.log(...a); };
-
-    let roundIds = [];
-    let currentId = null;
-
-    // Load the list of round IDs
-    async function loadRounds(){
-      roundCtEl.textContent = "Loading rounds…";
-      try{
-        const qs = await getDocs(roundsCol);
-        roundIds = qs.docs.map(d=>d.id).sort();
-        roundCtEl.textContent = `Rounds: ${roundIds.length}`;
-        nextBtn.disabled = roundIds.length === 0;
-        log("Loaded rounds:", roundIds);
-      }catch(e){
-        log("Failed to load rounds:", e.message);
-        roundCtEl.textContent = "Failed to load rounds";
-        nextBtn.disabled = true;
+      const cur = (await getDoc(roomRef)).data()?.currentRoundId;
+      let nextId = ids[Math.floor(Math.random() * ids.length)];
+      if (ids.length > 1) {
+        while (nextId === cur) nextId = ids[Math.floor(Math.random() * ids.length)];
       }
-    }
 
-    // Live subscribe to the room to show currentRoundId
-    onSnapshot(roomRef, snap=>{
-      if(!snap.exists()){ currentEl.textContent = "current: —"; return; }
-      const d = snap.data();
-      currentId = d.currentRoundId || null;
-      currentEl.textContent = `current: ${currentId ?? "—"}`;
+      const endsAt = Date.now() + 15000; // 15s from now
+
+      await updateDoc(roomRef, {
+        currentRoundId: nextId,
+        roundEndsAt: endsAt
+      });
+
+      status.textContent = `✅ Round started (${nextId}) — ends in 15s`;
     });
 
-    // Advance to a random different round
-    async function nextRandom(){
-      if(!roundIds.length){ alert("No rounds found."); return; }
-      let pick = roundIds[Math.floor(Math.random()*roundIds.length)];
-      if(roundIds.length>1){
-        // avoid repeating the same id if we have >1 choice
-        const safety = 20;
-        let tries = 0;
-        while(pick === currentId && tries++ < safety){
-          pick = roundIds[Math.floor(Math.random()*roundIds.length)];
-        }
-      }
-      try{
-        await updateDoc(roomRef, { currentRoundId: pick });
-        log("Set currentRoundId ->", pick);
-      }catch(e){
-        log("Failed to update room:", e.message);
-        alert("Update failed. Check Firestore rules.");
-      }
-    }
-
-    nextBtn.addEventListener('click', nextRandom);
-
-    // Kick things off
-    loadRounds();
+    resetBtn.addEventListener("click", async () => {
+      await updateDoc(roomRef, { currentRoundId: null, roundEndsAt: 0 });
+      status.textContent = "Game reset.";
+    });
   </script>
 </body>
 </html>
