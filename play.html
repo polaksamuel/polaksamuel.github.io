@@ -24,6 +24,7 @@
   .section{margin-top:16px}
   .list{font-size:.95rem}
   .good{color:var(--good)} .bad{color:var(--bad)}
+
   /* DEV */
   #devBox{display:none;margin-top:18px;background:#0b0f29;border:1px dashed #3a4aa0;padding:14px;border-radius:14px}
   #devBox h3{margin:0 0 8px}
@@ -31,6 +32,7 @@
   #devBox label{font-size:.9rem;opacity:.9}
   #devBox input[type="range"]{width:100%}
   #jsonOut{background:#0a0f24;border:1px solid #2b3170;color:#c9f0ff;padding:10px;border-radius:8px;overflow:auto;font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
+
   #dbg{position:fixed;left:10px;bottom:10px;background:#0a0f24;border:1px solid #335;padding:8px 10px;border-radius:10px;max-width:70vw;font:12px/1.35 monospace;color:#9fe;opacity:.92;display:none}
 </style>
 </head>
@@ -73,7 +75,7 @@
       <div class="grid">
         <div>
           <label>Preview page image (URL or filename like <code>page02.png</code>)</label>
-          <input id="devPageUrl" type="text" placeholder="https://weha07boyoz.com/page02.png or page02.png"/>
+          <input id="devPageUrl" type="text" placeholder="https://weha07boyoz.com/page02.png or page02.png" list="pageList"/>
           <datalist id="pageList"></datalist>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button id="devLoad" class="small secondary">Load for preview</button>
@@ -120,7 +122,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
 import {
   getFirestore, doc, onSnapshot, getDoc, setDoc, updateDoc, collection,
-  getDocs, addDoc, serverTimestamp
+  getDocs, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -153,7 +155,6 @@ const isAdmin = params.has('admin');
 if (isDev) dbg.style.display = 'block';
 if (isDev) document.getElementById('devBox').style.display = 'block';
 if (isDev || isAdmin) revealBtn.style.display = 'inline-block';
-
 function log(...a){ if(!isDev) return; dbg.textContent = a.map(x => typeof x==='object'?JSON.stringify(x):String(x)).join(' '); console.log(...a); }
 
 const ROOM_ID = 'game1';
@@ -168,8 +169,8 @@ if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localSto
 /* =============== Image helpers =============== */
 let roundState = { id:null, answer:"", crop:null, pageImage:"", revealAt:0 };
 let roundImg = null;
-let devOverrideImg = null;        // when you load a page for preview (dev only)
-let devOverrideUrl = "";          // the URL currently previewed (dev)
+let devOverrideImg = null;
+let devOverrideUrl = "";
 let ticker = null;
 
 function resolveUrl(s){
@@ -231,10 +232,10 @@ onSnapshot(roomRef, async (snap)=>{
   qText.textContent = r.question || 'Who is this?';
   const rid = r.currentRoundId;
   roundIdEl.textContent = rid || '—';
+
   revealBtn.onclick = async ()=>{
     if (!rid) return;
-    const now = Date.now();
-    await updateDoc(roomRef, { revealAt: now });
+    await updateDoc(roomRef, { revealAt: Date.now() });
   };
 
   // Timer display
@@ -244,8 +245,9 @@ onSnapshot(roomRef, async (snap)=>{
     countEl.textContent = left;
   }, 200);
 
-  // switch round sub
   if (!rid) return;
+
+  // Switch round subscription
   if (unsubRound) unsubRound();
   const rRef = doc(db, 'rooms', ROOM_ID, 'rounds', rid);
   unsubRound = onSnapshot(rRef, async(s2)=>{
@@ -259,7 +261,7 @@ onSnapshot(roomRef, async (snap)=>{
     };
     try{
       roundImg = await loadImage(roundState.pageImage);
-      draw();
+      if (!devOverrideImg) draw(); // if previewing, don't overwrite
     }catch(e){ log('IMG FAIL', e.message); }
   });
 
@@ -324,9 +326,8 @@ onSnapshot(roomRef, async (snap)=>{
   if(!snap.exists()) return;
   const r = snap.data()||{};
   if (!roundState.id) return;
-  // When crossing reveal time, settle scores for everyone that hasn't been settled yet
+
   if ((r.revealAt||0) > 0 && (r.revealAt||0) <= Date.now()){
-    // fetch guesses
     const qs = await getDocs(collection(db, 'rooms', ROOM_ID, 'rounds', roundState.id, 'answers'));
     const updates = [];
     for (const docSnap of qs.docs){
@@ -356,12 +357,11 @@ const jsonOut=document.getElementById('jsonOut');
 const pageList = document.getElementById('pageList');
 
 if (isDev){
-  // prefill datalist page01..page60 suggestions
+  // datalist page01..page60
   const opts = Array.from({length:60},(_,i)=>`page${String(i+1).padStart(2,'0')}.png`);
   pageList.innerHTML = opts.map(p=>`<option value="${p}">`).join('');
   devPageUrl.setAttribute('list','pageList');
 
-  // hydrate sliders from round initially
   const hydrateSliders = ()=>{
     const c = normalizeCrop(roundState.crop||{});
     xSl.value=c.xPct; ySl.value=c.yPct; wSl.value=c.wPct; hSl.value=c.hPct;
@@ -385,7 +385,7 @@ if (isDev){
     try{
       devOverrideImg = await loadImage(url);
       devOverrideUrl = url;
-      devSaveUrl.value = url; // assume you’ll save this URL
+      devSaveUrl.value = url;
       draw();
     }catch(e){ alert("Couldn’t load image. Check the URL/filename."); }
   });
@@ -411,10 +411,11 @@ if (isDev){
     try{
       const id = await nextRoundId();
       await setDoc(doc(db, 'rooms', ROOM_ID, 'rounds', id), {
-        answer, pageImage: pageU, crop
+        answer, pageImage: pageU, crop, createdAt: serverTimestamp()
       }, { merge:true });
       await updateDoc(roomRef, { currentRoundId: id, revealAt: Date.now()+15000 });
       alert(`Saved ${id} and switched the room.`);
+      devOverrideImg = null; devOverrideUrl=""; // go back to round image
     }catch(e){ console.error(e); alert("Save failed (rules?). Open console."); }
   });
 
@@ -428,7 +429,6 @@ if (isDev){
     await updateDoc(roomRef, { currentRoundId: pick, revealAt: Date.now()+15000 });
   });
 
-  // Keep sliders in sync when the round changes
   onSnapshot(roomRef, ()=> setTimeout(()=>hydrateSliders(), 50));
 }
 
