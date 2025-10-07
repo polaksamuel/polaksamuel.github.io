@@ -24,7 +24,6 @@
   .section{margin-top:16px}
   .list{font-size:.95rem}
   .good{color:var(--good)} .bad{color:var(--bad)}
-
   /* DEV */
   #devBox{display:none;margin-top:18px;background:#0b0f29;border:1px dashed #3a4aa0;padding:14px;border-radius:14px}
   #devBox h3{margin:0 0 8px}
@@ -32,7 +31,6 @@
   #devBox label{font-size:.9rem;opacity:.9}
   #devBox input[type="range"]{width:100%}
   #jsonOut{background:#0a0f24;border:1px solid #2b3170;color:#c9f0ff;padding:10px;border-radius:8px;overflow:auto;font:12px/1.4 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace}
-
   #dbg{position:fixed;left:10px;bottom:10px;background:#0a0f24;border:1px solid #335;padding:8px 10px;border-radius:10px;max-width:70vw;font:12px/1.35 monospace;color:#9fe;opacity:.92;display:none}
 </style>
 </head>
@@ -75,7 +73,7 @@
       <div class="grid">
         <div>
           <label>Preview page image (URL or filename like <code>page02.png</code>)</label>
-          <input id="devPageUrl" type="text" placeholder="https://weha07boyoz.com/page02.png or page02.png" list="pageList"/>
+          <input id="devPageUrl" type="text" placeholder="https://weha07boyoz.com/page02.png or page02.png"/>
           <datalist id="pageList"></datalist>
           <div style="display:flex;gap:8px;margin-top:8px">
             <button id="devLoad" class="small secondary">Load for preview</button>
@@ -155,6 +153,7 @@ const isAdmin = params.has('admin');
 if (isDev) dbg.style.display = 'block';
 if (isDev) document.getElementById('devBox').style.display = 'block';
 if (isDev || isAdmin) revealBtn.style.display = 'inline-block';
+
 function log(...a){ if(!isDev) return; dbg.textContent = a.map(x => typeof x==='object'?JSON.stringify(x):String(x)).join(' '); console.log(...a); }
 
 const ROOM_ID = 'game1';
@@ -169,8 +168,11 @@ if (!playerName) { playerName = prompt("Enter your name:") || "Player"; localSto
 /* =============== Image helpers =============== */
 let roundState = { id:null, answer:"", crop:null, pageImage:"", revealAt:0 };
 let roundImg = null;
-let devOverrideImg = null;
-let devOverrideUrl = "";
+
+let devOverrideImg = null;    // image chosen for preview
+let devOverrideUrl = "";      // its URL
+let devCropOverride = null;   // <-- slider crop to preview (fix)
+
 let ticker = null;
 
 function resolveUrl(s){
@@ -196,13 +198,19 @@ function normalizeCrop(c){
 function draw(){
   const img = devOverrideImg || roundImg;
   if (!img) return;
-  const c = normalizeCrop(roundState.crop||{});
+
+  // use dev override crop if present (slider preview), else saved round crop
+  const baseCrop = (isDev && devCropOverride) ? devCropOverride : (roundState.crop || {});
+  const c = normalizeCrop(baseCrop);
+
   let {xPct,yPct,wPct,hPct} = c;
-  wPct = Math.min(wPct, 1-xPct);
-  hPct = Math.min(hPct, 1-yPct);
+  wPct = Math.min(wPct, 1 - xPct);
+  hPct = Math.min(hPct, 1 - yPct);
+
   const W = img.naturalWidth, H = img.naturalHeight;
   const sx = Math.round(xPct*W), sy = Math.round(yPct*H);
   const sw = Math.max(1, Math.round(wPct*W)), sh = Math.max(1, Math.round(hPct*H));
+
   ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.imageSmoothingQuality='high';
   ctx.drawImage(img, sx,sy,sw,sh, 0,0, canvas.width,canvas.height);
@@ -232,10 +240,10 @@ onSnapshot(roomRef, async (snap)=>{
   qText.textContent = r.question || 'Who is this?';
   const rid = r.currentRoundId;
   roundIdEl.textContent = rid || '—';
-
   revealBtn.onclick = async ()=>{
     if (!rid) return;
-    await updateDoc(roomRef, { revealAt: Date.now() });
+    const now = Date.now();
+    await updateDoc(roomRef, { revealAt: now });
   };
 
   // Timer display
@@ -245,9 +253,8 @@ onSnapshot(roomRef, async (snap)=>{
     countEl.textContent = left;
   }, 200);
 
+  // switch round sub
   if (!rid) return;
-
-  // Switch round subscription
   if (unsubRound) unsubRound();
   const rRef = doc(db, 'rooms', ROOM_ID, 'rounds', rid);
   unsubRound = onSnapshot(rRef, async(s2)=>{
@@ -260,8 +267,10 @@ onSnapshot(roomRef, async (snap)=>{
       pageImage: resolveUrl(d.pageImage||"")
     };
     try{
-      roundImg = await loadImage(roundState.pageImage);
-      if (!devOverrideImg) draw(); // if previewing, don't overwrite
+      const img = await loadImage(roundState.pageImage);
+      roundImg = img;
+      // if you were previewing a different page, keep that; otherwise draw the round image
+      draw();
     }catch(e){ log('IMG FAIL', e.message); }
   });
 
@@ -326,7 +335,6 @@ onSnapshot(roomRef, async (snap)=>{
   if(!snap.exists()) return;
   const r = snap.data()||{};
   if (!roundState.id) return;
-
   if ((r.revealAt||0) > 0 && (r.revealAt||0) <= Date.now()){
     const qs = await getDocs(collection(db, 'rooms', ROOM_ID, 'rounds', roundState.id, 'answers'));
     const updates = [];
@@ -357,7 +365,7 @@ const jsonOut=document.getElementById('jsonOut');
 const pageList = document.getElementById('pageList');
 
 if (isDev){
-  // datalist page01..page60
+  // datalist suggestions page01..page60
   const opts = Array.from({length:60},(_,i)=>`page${String(i+1).padStart(2,'0')}.png`);
   pageList.innerHTML = opts.map(p=>`<option value="${p}">`).join('');
   devPageUrl.setAttribute('list','pageList');
@@ -365,17 +373,17 @@ if (isDev){
   const hydrateSliders = ()=>{
     const c = normalizeCrop(roundState.crop||{});
     xSl.value=c.xPct; ySl.value=c.yPct; wSl.value=c.wPct; hSl.value=c.hPct;
-    jsonOut.textContent = JSON.stringify({
-      xPct:+xSl.value, yPct:+ySl.value, wPct:+wSl.value, hPct:+hSl.value
-    }, null, 2);
+    devCropOverride = { xPct:+xSl.value, yPct:+ySl.value, wPct:+wSl.value, hPct:+hSl.value };
+    jsonOut.textContent = JSON.stringify(devCropOverride, null, 2);
   };
   hydrateSliders();
 
   [xSl,ySl,wSl,hSl].forEach(sl=> sl.addEventListener('input', ()=>{
-    jsonOut.textContent = JSON.stringify({
+    devCropOverride = {
       xPct:+xSl.value, yPct:+ySl.value, wPct:+wSl.value, hPct:+hSl.value
-    }, null, 2);
-    draw();
+    };
+    jsonOut.textContent = JSON.stringify(devCropOverride, null, 2);
+    draw();  // live preview
   }));
 
   devLoadBtn.addEventListener('click', async ()=>{
@@ -385,12 +393,14 @@ if (isDev){
     try{
       devOverrideImg = await loadImage(url);
       devOverrideUrl = url;
-      devSaveUrl.value = url;
+      devSaveUrl.value = url; // default save to this url
       draw();
     }catch(e){ alert("Couldn’t load image. Check the URL/filename."); }
   });
+
   devClearBtn.addEventListener('click', ()=>{
-    devOverrideImg = null; devOverrideUrl=""; draw();
+    devOverrideImg = null; devOverrideUrl=""; devCropOverride = null;
+    draw();
   });
 
   async function nextRoundId(){
@@ -407,15 +417,14 @@ if (isDev){
     const answer = (devAnswer.value||"").trim();
     const pageU = (devSaveUrl.value||"").trim() || devOverrideUrl || roundState.pageImage;
     if (!answer || !pageU){ alert("Provide an answer and a page image URL/filename."); return; }
-    const crop = { xPct:+xSl.value, yPct:+ySl.value, wPct:+wSl.value, hPct:+hSl.value };
+    const crop = devCropOverride || normalizeCrop(roundState.crop||{});
     try{
       const id = await nextRoundId();
       await setDoc(doc(db, 'rooms', ROOM_ID, 'rounds', id), {
-        answer, pageImage: pageU, crop, createdAt: serverTimestamp()
+        answer, pageImage: pageU, crop
       }, { merge:true });
-      await updateDoc(roomRef, { currentRoundId: id, revealAt: Date.now()+15000 });
+      await updateDoc(roomRef, { currentRoundId: id, revealAt: Date.now()+15000, version: serverTimestamp() });
       alert(`Saved ${id} and switched the room.`);
-      devOverrideImg = null; devOverrideUrl=""; // go back to round image
     }catch(e){ console.error(e); alert("Save failed (rules?). Open console."); }
   });
 
@@ -426,7 +435,7 @@ if (isDev){
     const cur = (await getDoc(roomRef)).data()?.currentRoundId;
     let pick = ids[Math.floor(Math.random()*ids.length)];
     if (ids.length>1){ while(pick===cur) pick = ids[Math.floor(Math.random()*ids.length)]; }
-    await updateDoc(roomRef, { currentRoundId: pick, revealAt: Date.now()+15000 });
+    await updateDoc(roomRef, { currentRoundId: pick, revealAt: Date.now()+15000, version: serverTimestamp() });
   });
 
   onSnapshot(roomRef, ()=> setTimeout(()=>hydrateSliders(), 50));
