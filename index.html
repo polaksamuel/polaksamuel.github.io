@@ -39,7 +39,6 @@
   }
   .hero::before{
     content:"";position:absolute;inset:0;
-    /* Show most of the image without cropping; adjust 70–80% to taste */
     background:var(--hero-bg) center / 70% auto no-repeat;
     background-color:#000;
     filter:grayscale(10%) contrast(1.05) brightness(.9);
@@ -74,31 +73,9 @@
   }
   h2{margin:0 0 8px;font-size:clamp(24px,3.2vw,30px)}
   .muted{color:var(--muted)}
-
-  /* quiz */
-  #quiz h3{margin:14px 0 12px}
-  #quiz .btn{margin:6px;background:#2b3170;color:var(--ink)}
-  #result{font-weight:700}
-
-  /* wheel */
-  .wheel-wrap{display:flex;justify-content:center;margin:18px 0;position:relative}
-  .pointer{position:absolute;top:-6px;font-size:1.35rem;filter:drop-shadow(0 2px 6px rgba(0,0,0,.6))}
-  #wheel{
-    width:340px;height:340px;border-radius:50%;border:10px solid #fff;
-    background:conic-gradient(#ff6b6b 0 120deg, #4dabf7 120deg 240deg, #51cf66 240deg 360deg);
-    box-shadow:0 12px 36px rgba(0,0,0,.35), inset 0 0 40px rgba(255,255,255,.06);
-    transition:transform 4s cubic-bezier(.33,1,.68,1);
-  }
-  .legend{opacity:.9;font-size:.95rem}
-
-  footer{padding:44px 0;text-align:center;opacity:.75;font-size:.9rem}
-  .section-title{display:flex;align-items:center;gap:10px;justify-content:center}
-  .section-title .dot{width:8px;height:8px;background:var(--brand);border-radius:50%;box-shadow:0 0 18px var(--brand)}
 </style>
 </head>
 <body>
-
-
 
 <!-- NAV -->
 <div class="nav">
@@ -107,10 +84,10 @@
     <a href="/play.html" class="btn">Guess Who?</a>
     <a href="#quiz-section" class="btn">Quiz</a>
     <a href="#wheel-section" class="btn">Wheel</a>
-    <a href="#history-section" class="btn">History</a>
+    <!-- <a href="#history-section" class="btn">History</a> -->
+    <a href="#wingmasters-section" class="btn">Wingmasters</a>
   </div>
 </div>
-
 
 <!-- HERO -->
 <header class="hero" id="top">
@@ -161,78 +138,72 @@
       </div>
     </section>
 
-    <!-- 
-===== Temporarily disabled: Hall of Champions =====
-    <!-- LEAGUE HISTORY -->
+    <!-- ===== Temporarily disabled: Hall of Champions =====
     <section id="history-section">
       <div class="card" style="text-align:center">
         <div class="section-title">
-          <span class="dot"></span><h2>🏆 Hall of Championss</h2><span class="dot"></span>
+          <span class="dot"></span><h2>🏆 Hall of Champions</h2><span class="dot"></span>
         </div>
         <p class="muted">All-time winners & finals results</p>
         <div id="history"></div>
       </div>
     </section>
+    ===== End of Hall of Champions ===== -->
 
-===== End of Hall of Champions =====
--->
+    <!-- 🍗 HALL OF WINGMASTERS -->
+    <section id="wingmasters-section">
+      <div class="card" style="text-align:center">
+        <div class="section-title">
+          <span class="dot"></span><h2>🍗 Hall of Wingmasters</h2><span class="dot"></span>
+        </div>
 
-<div style="overflow:auto; margin-top:12px">
-  <table style="width:100%; border-collapse:collapse; text-align:left;">
-    <thead>
-      <tr>
-        <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Wingmaster</th>
-        <th style="padding:10px 8px; border-bottom:1px solid var(--rim)"># Wings Eaten</th>
-        <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Yogurt Consumption</th>
-        <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Shame Level</th>
-        <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Answers to Sean ‘Mittsy’ Evans</th>
-      </tr>
-    </thead>
-    <tbody>
-      <!-- Train FIRST -->
-      <tr style="border-bottom:1px solid rgba(255,255,255,.06)">
-        <td style="padding:10px 8px"><b>Train</b></td>
-        <td style="padding:10px 8px">?</td>
-        <td style="padding:10px 8px">?</td>
-        <td style="padding:10px 8px">?</td>
-        <td style="padding:10px 8px">?</td>
-      </tr>
+        <div style="overflow:auto; margin-top:12px">
+          <table style="width:100%; border-collapse:collapse; text-align:left;">
+            <thead>
+              <tr>
+                <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Wingmaster</th>
+                <th style="padding:10px 8px; border-bottom:1px solid var(--rim)"># Wings Eaten</th>
+                <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Yogurt Consumption</th>
+                <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Shame Level</th>
+                <th style="padding:10px 8px; border-bottom:1px solid var(--rim)">Answers to Sean ‘Mittsy’ Evans</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Train FIRST -->
+              <tr style="border-bottom:1px solid rgba(255,255,255,.06)">
+                <td style="padding:10px 8px"><b>Train</b></td>
+                <td style="padding:10px 8px">?</td>
+                <td style="padding:10px 8px">?</td>
+                <td style="padding:10px 8px">?</td>
+                <td style="padding:10px 8px">?</td>
+              </tr>
 
-      <!-- Gunner SECOND (updated values) -->
-      <tr>
-        <td style="padding:10px 8px"><b>Gunner</b></td>
-        <td style="padding:10px 8px">All</td>
-        <td style="padding:10px 8px">99</td>
-        <td style="padding:10px 8px">0</td>
-        <td style="padding:10px 8px">A+</td>
-      </tr>
-    </tbody>
-  </table>
+              <!-- Gunner SECOND (updated values) -->
+              <tr>
+                <td style="padding:10px 8px"><b>Gunner</b></td>
+                <td style="padding:10px 8px">All</td>
+                <td style="padding:10px 8px">99</td>
+                <td style="padding:10px 8px">0</td>
+                <td style="padding:10px 8px">A+</td>
+              </tr>
+            </tbody>
+          </table>
 
-  <p class="muted" style="margin-top:10px; font-style:italic; opacity:.8;">
-    🔥 Pending evaluation
-  </p>
-</div>
+          <p class="muted" style="margin-top:10px; font-style:italic; opacity:.8;">
+            🔥 Pending evaluation
+          </p>
+        </div>
+      </div>
+    </section>
 
-  </div>
-</section>
-
-
-
-
-
-    
   </div>
 </main>
 
-
-
-  
 <footer>
   Built with ❤️ on GitHub Pages and Sagu Polate • <a href="https://weha07boyoz.com">weha07boyoz.com</a>
 </footer>
 
-<!-- ===== Your site scripts (quiz/wheel/history + hero image) ===== -->
+<!-- ===== Scripts (quiz/wheel/history + hero image) ===== -->
 <script>
   /* Smooth anchor scroll */
   document.querySelectorAll('a[href^="#"]').forEach(a=>{
@@ -294,7 +265,7 @@
     },4000);
   }
 
-  /* History (static) */
+  /* History (safe to keep; it exits if #history not present) */
   const HISTORY = [
     { season: 2017, champion: "Shmoo",   runnerUp: "D Mac",   score: "142–121" },
     { season: 2018, champion: "Mr Mitt", runnerUp: "Shmoo",   score: "128–122" },
@@ -341,15 +312,11 @@
   document.documentElement.style.setProperty('--hero-bg', `url("${chosen}")`);
 </script>
 
-
-
-
 <!-- Firebase core + Firestore SDK -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js";
-  import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
+  import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js";
 
-  // Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
     authDomain: "weha07boyoz-game.firebaseapp.com",
@@ -359,19 +326,14 @@
     appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
   };
 
-  // Initialize Firebase
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // ---- LIVE TEST: Read your “rooms/game1” document ----
   const gameDocRef = doc(db, "rooms", "game1");
-
   onSnapshot(gameDocRef, (docSnap) => {
     if (docSnap.exists()) {
       const data = docSnap.data();
       console.log("🔥 Live data from Firestore:", data);
-
-      // You can update the page dynamically here:
       document.body.insertAdjacentHTML("afterbegin",
         `<div style="position:fixed;top:0;left:0;background:green;color:white;padding:4px;z-index:9999">
            Game question: ${data.question} — Image: ${data.currentImage}
@@ -383,8 +345,5 @@
   });
 </script>
 
-
-
-  
 </body>
 </html>
