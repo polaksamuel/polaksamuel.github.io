@@ -314,7 +314,7 @@ submitBtn.addEventListener('click', async ()=>{
 
   const r = await getDoc(roomRef);
   const room = r.data()||{};
-  const timeUp = (room.roundEndsAt || 0) <= Date.now();
+  const timeUp = Date.now() >= (room.roundEndsAt || 0);
 if (timeUp) {
   alert("Time's up — wait for the next round!");
   return;
