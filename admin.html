@@ -84,8 +84,7 @@
 
       await updateDoc(roomRef, {
         currentRoundId: nextId,
-        roundEndsAt: endsAt,
-        revealAt: endsAt  // 👈 reveal answers once timer ends
+        roundEndsAt: endsAt
       });
 
       status.textContent = `✅ Round started (${nextId}) — ends in 15s`;
