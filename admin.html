@@ -84,7 +84,7 @@
 
       await updateDoc(roomRef, {
         currentRoundId: nextId,
-        roundEndsAt: endsAt
+        roundEndsAt: endsAt,
         revealAt: endsAt  // 👈 reveal answers once timer ends
       });
 
