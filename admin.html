@@ -37,7 +37,7 @@
 </head>
 <body>
   <h1>⚙️ Admin Panel</h1>
-  <p>Click to start a 15-second round or reset the game (clears all scores).</p>
+  <p>Click to start a 25-second round or reset the game (clears all scores).</p>
 
   <button id="nextBtn">🎲 Next (Random) Round</button>
   <button id="resetBtn">🔄 Reset Game</button>
@@ -83,16 +83,16 @@
 
       // Use Firestore server time to avoid clock skew
       const nowMs = Timestamp.now().toMillis();
-      const endsAt = nowMs + 15000; // 15s from now
+      const endsAt = nowMs + 25000; // ⏱ 25 s from now
 
       await updateDoc(roomRef, {
         currentRoundId: nextId,
-        roundEndsAt: endsAt,   // ⏱ used by play.html countdown
-        revealAt: endsAt,      // 👁 triggers reveal & scoring at the same time
+        roundEndsAt: endsAt,
+        revealAt: endsAt,
         version: serverTimestamp()
       });
 
-      status.textContent = `✅ Round started (${nextId}) — ends in 15s`;
+      status.textContent = `✅ Round started (${nextId}) — ends in 25 s`;
     });
 
     /* ------------------ Reset Game ------------------ */
