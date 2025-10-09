@@ -314,10 +314,10 @@ submitBtn.addEventListener('click', async ()=>{
 
   const r = await getDoc(roomRef);
   const room = r.data()||{};
-  const revealed = (room.revealAt||0) <= Date.now();
-  if (revealed){
-    alert("Time's up — wait for the next round!");
-    return;
+  const timeUp = (room.roundEndsAt || 0) <= Date.now();
+if (timeUp) {
+  alert("Time's up — wait for the next round!");
+  return;
   }
 
   // only one per round
