@@ -1,1 +1,127 @@
-<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8" /> <meta name="viewport" content="width=device-width, initial-scale=1.0" /> <title>WeHa 07 Boyoz – Admin</title> <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet"> <style> body { font-family: Poppins, system-ui, sans-serif; background: #0b0e1a; color: #e9ecff; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; text-align: center; } button { margin: 10px; padding: 12px 20px; font-weight: 700; border: none; border-radius: 12px; background: #38d3ff; color: #001022; cursor: pointer; } #status { margin-top: 14px; font-size: 0.95rem; opacity: 0.8; white-space: pre-line; } </style> </head> <body> <h1>⚙️ Admin Panel</h1> <p>Click to start a 15-second round or reset the game (clears all scores).</p> <button id="nextBtn">🎲 Next (Random) Round</button> <button id="resetBtn">🔄 Reset Game</button> <div id="status">Fetching rounds...</div> <script type="module"> import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js"; import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, getDoc } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js"; const firebaseConfig = { apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s", authDomain: "weha07boyoz-game.firebaseapp.com", projectId: "weha07boyoz-game", storageBucket: "weha07boyoz-game.firebasestorage.app", messagingSenderId: "300785635491", appId: "1:300785635491:web:d3ef9caa6156a18788ef16" }; const app = initializeApp(firebaseConfig); const db = getFirestore(app); const roomRef = doc(db, "rooms", "game1"); const nextBtn = document.getElementById("nextBtn"); const resetBtn = document.getElementById("resetBtn"); const status = document.getElementById("status"); /* ------------------ Next Random Round ------------------ */ nextBtn.addEventListener("click", async () => { status.textContent = "Choosing random round..."; const roundsCol = collection(db, "rooms", "game1", "rounds"); const qs = await getDocs(roundsCol); const ids = qs.docs.map(d => d.id); if (!ids.length) return alert("No rounds found!"); const cur = (await getDoc(roomRef)).data()?.currentRoundId; let nextId = ids[Math.floor(Math.random() * ids.length)]; if (ids.length > 1) { while (nextId === cur) nextId = ids[Math.floor(Math.random() * ids.length)]; } const endsAt = Date.now() + 15000; // 15s from now await updateDoc(roomRef, { currentRoundId: nextId, roundEndsAt: endsAt }); status.textContent = ✅ Round started (${nextId}) — ends in 15s; }); /* ------------------ Reset Game ------------------ */ resetBtn.addEventListener("click", async () => { try { status.textContent = "🧹 Resetting game...\nClearing player scores and guesses..."; // 1️⃣ Clear main room fields await updateDoc(roomRef, { currentRoundId: null, roundEndsAt: 0 }); // 2️⃣ Delete all players const playerCol = collection(db, "rooms", "game1", "Players"); const players = await getDocs(playerCol); for (const p of players.docs) { await deleteDoc(p.ref); } // 3️⃣ Delete all guess subcollections in each round const roundsCol = collection(db, "rooms", "game1", "rounds"); const rounds = await getDocs(roundsCol); for (const r of rounds.docs) { const guessCol = collection(db, "rooms", "game1", "rounds", r.id, "guesses"); const guesses = await getDocs(guessCol); for (const g of guesses.docs) { await deleteDoc(g.ref); } } status.textContent = "✅ Game fully reset.\nAll players and guesses cleared."; } catch (err) { console.error(err); status.textContent = "❌ Reset failed. Check console."; } }); </script> </body> </html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>WeHa 07 Boyoz – Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: Poppins, system-ui, sans-serif;
+      background: #0b0e1a;
+      color: #e9ecff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      text-align: center;
+    }
+    button {
+      margin: 10px;
+      padding: 12px 20px;
+      font-weight: 700;
+      border: none;
+      border-radius: 12px;
+      background: #38d3ff;
+      color: #001022;
+      cursor: pointer;
+    }
+    #status {
+      margin-top: 14px;
+      font-size: 0.95rem;
+      opacity: 0.8;
+      white-space: pre-line;
+    }
+  </style>
+</head>
+<body>
+  <h1>⚙️ Admin Panel</h1>
+  <p>Click to start a 15-second round or reset the game (clears all scores).</p>
+
+  <button id="nextBtn">🎲 Next (Random) Round</button>
+  <button id="resetBtn">🔄 Reset Game</button>
+
+  <div id="status">Fetching rounds...</div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
+    import {
+      getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, getDoc
+    } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyC_YzaooeCA-VpI3gZgpQ7F3QoJzmlbe0s",
+      authDomain: "weha07boyoz-game.firebaseapp.com",
+      projectId: "weha07boyoz-game",
+      storageBucket: "weha07boyoz-game.firebasestorage.app",
+      messagingSenderId: "300785635491",
+      appId: "1:300785635491:web:d3ef9caa6156a18788ef16"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const roomRef = doc(db, "rooms", "game1");
+    const nextBtn = document.getElementById("nextBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const status = document.getElementById("status");
+
+    /* ------------------ Next Random Round ------------------ */
+    nextBtn.addEventListener("click", async () => {
+      status.textContent = "Choosing random round...";
+      const roundsCol = collection(db, "rooms", "game1", "rounds");
+      const qs = await getDocs(roundsCol);
+      const ids = qs.docs.map(d => d.id);
+      if (!ids.length) return alert("No rounds found!");
+
+      const cur = (await getDoc(roomRef)).data()?.currentRoundId;
+      let nextId = ids[Math.floor(Math.random() * ids.length)];
+      if (ids.length > 1) {
+        while (nextId === cur) nextId = ids[Math.floor(Math.random() * ids.length)];
+      }
+
+      const endsAt = Date.now() + 15000; // 15s from now
+
+      await updateDoc(roomRef, {
+        currentRoundId: nextId,
+        roundEndsAt: endsAt
+      });
+
+      status.textContent = `✅ Round started (${nextId}) — ends in 15s`;
+    });
+
+    /* ------------------ Reset Game ------------------ */
+    resetBtn.addEventListener("click", async () => {
+      try {
+        status.textContent = "🧹 Resetting game...\nClearing player scores and guesses...";
+
+        // 1️⃣ Clear main room fields
+        await updateDoc(roomRef, { currentRoundId: null, roundEndsAt: 0 });
+
+        // 2️⃣ Delete all players
+        const playerCol = collection(db, "rooms", "game1", "Players");
+        const players = await getDocs(playerCol);
+        for (const p of players.docs) {
+          await deleteDoc(p.ref);
+        }
+
+        // 3️⃣ Delete all guess subcollections in each round
+        const roundsCol = collection(db, "rooms", "game1", "rounds");
+        const rounds = await getDocs(roundsCol);
+        for (const r of rounds.docs) {
+          const guessCol = collection(db, "rooms", "game1", "rounds", r.id, "guesses");
+          const guesses = await getDocs(guessCol);
+          for (const g of guesses.docs) {
+            await deleteDoc(g.ref);
+          }
+        }
+
+        status.textContent = "✅ Game fully reset.\nAll players and guesses cleared.";
+      } catch (err) {
+        console.error(err);
+        status.textContent = "❌ Reset failed. Check console.";
+      }
+    });
+  </script>
+</body>
+</html>
