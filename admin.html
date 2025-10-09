@@ -47,7 +47,8 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-app.js";
     import {
-      getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, getDoc
+      getFirestore, collection, getDocs, doc, updateDoc, deleteDoc, getDoc,
+      serverTimestamp, Timestamp
     } from "https://www.gstatic.com/firebasejs/12.3.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -72,7 +73,7 @@
       const roundsCol = collection(db, "rooms", "game1", "rounds");
       const qs = await getDocs(roundsCol);
       const ids = qs.docs.map(d => d.id);
-      if (!ids.length) return alert("No rounds found!");
+      if (!ids.length) { alert("No rounds found!"); return; }
 
       const cur = (await getDoc(roomRef)).data()?.currentRoundId;
       let nextId = ids[Math.floor(Math.random() * ids.length)];
@@ -80,11 +81,15 @@
         while (nextId === cur) nextId = ids[Math.floor(Math.random() * ids.length)];
       }
 
-      const endsAt = Date.now() + 15000; // 15s from now
+      // Use Firestore server time to avoid clock skew
+      const nowMs = Timestamp.now().toMillis();
+      const endsAt = nowMs + 15000; // 15s from now
 
       await updateDoc(roomRef, {
         currentRoundId: nextId,
-        roundEndsAt: endsAt
+        roundEndsAt: endsAt,   // ⏱ used by play.html countdown
+        revealAt: endsAt,      // 👁 triggers reveal & scoring at the same time
+        version: serverTimestamp()
       });
 
       status.textContent = `✅ Round started (${nextId}) — ends in 15s`;
@@ -93,30 +98,26 @@
     /* ------------------ Reset Game ------------------ */
     resetBtn.addEventListener("click", async () => {
       try {
-        status.textContent = "🧹 Resetting game...\nClearing player scores and guesses...";
+        status.textContent = "🧹 Resetting game...\nClearing player scores and answers...";
 
         // 1️⃣ Clear main room fields
-        await updateDoc(roomRef, { currentRoundId: null, roundEndsAt: 0 });
+        await updateDoc(roomRef, { currentRoundId: null, roundEndsAt: 0, revealAt: 0, version: serverTimestamp() });
 
         // 2️⃣ Delete all players
         const playerCol = collection(db, "rooms", "game1", "Players");
         const players = await getDocs(playerCol);
-        for (const p of players.docs) {
-          await deleteDoc(p.ref);
-        }
+        for (const p of players.docs) await deleteDoc(p.ref);
 
-        // 3️⃣ Delete all guess subcollections in each round
+        // 3️⃣ Delete all answer subcollections in each round
         const roundsCol = collection(db, "rooms", "game1", "rounds");
         const rounds = await getDocs(roundsCol);
         for (const r of rounds.docs) {
-          const guessCol = collection(db, "rooms", "game1", "rounds", r.id, "guesses");
-          const guesses = await getDocs(guessCol);
-          for (const g of guesses.docs) {
-            await deleteDoc(g.ref);
-          }
+          const answersCol = collection(db, "rooms", "game1", "rounds", r.id, "answers");
+          const answers = await getDocs(answersCol);
+          for (const a of answers.docs) await deleteDoc(a.ref);
         }
 
-        status.textContent = "✅ Game fully reset.\nAll players and guesses cleared.";
+        status.textContent = "✅ Game fully reset.\nAll players and answers cleared.";
       } catch (err) {
         console.error(err);
         status.textContent = "❌ Reset failed. Check console.";
