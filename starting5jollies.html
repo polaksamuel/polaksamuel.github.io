@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
 
 <style>
-  /* ===== Theme: matches index.html ===== */
+  /* ===== Theme: mirrors your index.html ===== */
   :root{
     --bg:#0b0e1a;
     --ink:#e9ecff;
@@ -18,25 +18,40 @@
     --rim:#2b3170;
   }
   *{box-sizing:border-box}
-  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Poppins,system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  html,body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:Poppins,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+  }
   a{color:var(--brand);text-decoration:none}
   .container{max-width:1080px;margin:0 auto;padding:0 20px}
 
-  /* ---------- NAV ---------- */
+  /* ---------- NAV (same vibe as home) ---------- */
   .nav{
     position:sticky;top:0;z-index:50;
     display:flex;justify-content:space-between;align-items:center;
-    padding:14px 20px;background:linear-gradient(180deg,rgba(10,12,24,.85),rgba(10,12,24,0));
+    padding:14px 20px;
+    background:linear-gradient(180deg,rgba(10,12,24,.85),rgba(10,12,24,0));
     backdrop-filter: blur(6px);
     border-bottom:1px solid rgba(255,255,255,.06);
   }
   .brand{font-weight:800;letter-spacing:.5px}
-  .nav a.btn{padding:10px 14px;border-radius:10px;background:#2b3170;color:var(--ink);font-weight:600;display:inline-block;margin-left:8px}
+  .nav a.btn{
+    padding:10px 14px;border-radius:10px;background:#2b3170;
+    color:var(--ink);font-weight:600;display:inline-block;margin-left:8px
+  }
 
   /* ---------- Header ---------- */
   header{padding:48px 0 10px;text-align:center}
-  h1{font-size:clamp(32px,6vw,60px);line-height:1.05;margin:6px 0 8px;font-weight:800;text-shadow:0 8px 40px rgba(0,0,0,.6)}
-  .tag{display:inline-block;padding:7px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;color:var(--muted);font-size:.9rem;background:rgba(20,24,58,.45)}
+  h1{
+    font-size:clamp(32px,6vw,60px);line-height:1.05;margin:6px 0 8px;font-weight:800;
+    text-shadow:0 8px 40px rgba(0,0,0,.6)
+  }
+  .tag{
+    display:inline-block;padding:7px 12px;border:1px solid rgba(255,255,255,.2);
+    border-radius:999px;color:var(--muted);font-size:.9rem;background:rgba(20,24,58,.45)
+  }
   .sub{opacity:.9}
 
   /* ---------- Card ---------- */
@@ -50,7 +65,7 @@
   .grid-wrap{margin-top:18px}
   .grid{
     display:grid;
-    grid-template-columns: 90px repeat(5, 1fr); /* price + 5 custom columns */
+    grid-template-columns: 88px repeat(5, 1fr); /* price + 5 custom columns */
     gap:10px;
   }
   .cell{
@@ -59,21 +74,46 @@
     border-radius:14px;
     min-height:92px;
     display:flex;align-items:center;justify-content:center;
-    text-align:center;padding:8px;
+    text-align:center;padding:10px;
   }
-  .cell.header{background:rgba(56,211,255,.08);border-color:rgba(56,211,255,.25);font-weight:700}
-  .cell.price{background:rgba(255,255,255,.02);font-weight:700}
+  .cell.header{
+    background:rgba(56,211,255,.08);
+    border-color:rgba(56,211,255,.25);
+    font-weight:700;
+    padding:12px 10px;
+  }
+  .cell.price{
+    background:rgba(255,255,255,.02);
+    font-weight:700;
+  }
 
-  .player{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
-  .player img{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12)}
-  .player .name{font-weight:600;font-size:.95rem}
-  .player .meta{opacity:.85;font-size:.8rem}
+  /* Player text block — tuned to prevent overlap */
+  .player{
+    width:100%;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  }
+  .player .name{
+    font-weight:600;
+    font-size:.82rem;          /* compact */
+    line-height:1.15;
+    overflow-wrap:anywhere;    /* aggressive wrapping for long labels */
+    word-break:break-word;
+    hyphens:auto;
+    max-width:100%;
+  }
+  .player .meta{
+    opacity:.78;
+    font-size:.78rem;
+  }
 
-  .budget{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border:1px dashed var(--rim);border-radius:12px;background:rgba(255,255,255,.03)}
-
-  @media (max-width: 860px){
-    .grid{grid-template-columns: 70px repeat(5, 1fr)}
-    .player img{width:56px;height:56px}
+  /* Mobile tweaks */
+  @media (max-width: 980px){
+    .grid{grid-template-columns: 72px repeat(5, 1fr)}
+    .cell{min-height:86px}
+    .player .name{font-size:.8rem}
+  }
+  @media (max-width: 720px){
+    .player .name{font-size:.78rem}
   }
 </style>
 </head>
@@ -91,68 +131,63 @@
 <header class="container">
   <span class="tag">OFFICIAL FANTASY BBALL SITE</span>
   <h1>Starting 5 — Jollies</h1>
-  <p class="sub">Build your lineup with <b>$15</b>. Tap players to select — we’ll wire up logic next.</p>
+  <p class="sub">Build your lineup with <b>$15</b>. Images and interactivity can come later — this is the clean grid skeleton.</p>
 </header>
 
 <main class="container">
   <div class="card">
 
-    <!-- Budget / status -->
-    <div class="budget">
-      <div>Budget: <b>$15</b> total</div>
-      <div>Spent: <b id="spent">$0</b> • Remaining: <b id="left">$15</b></div>
-    </div>
-
-    <!-- Grid -->
     <div class="grid-wrap">
       <div class="grid" id="grid">
-        <!-- Top headers -->
+
+        <!-- Headers -->
         <div class="cell header"></div>
         <div class="cell header">Alternate Boyyoz</div>
         <div class="cell header">Sub Chats</div>
         <div class="cell header">Alternate Boyyoz 2</div>
         <div class="cell header">Sub Pairings and Group</div>
-        <div class="cell header">Alternate Boyyos Egoz</div>
+        <div class="cell header">Alternate Boyyoz Egoz</div>
 
         <!-- $5 row -->
         <div class="cell price">$5</div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$5</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$5</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$5</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$5</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$5</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Hennessy Baba</div><div class="meta">$5</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Baseball Boyyoz</div><div class="meta">$5</div></div></div>
+        <div class="cell"><div class="player"><div class="name">GDN</div><div class="meta">$5</div></div></div>
+        <div class="cell"><div class="player"><div class="name">CCWest all-conference soccer thank you very much (Nico, PJV, Beanz, Roc, Shmoo)</div><div class="meta">$5</div></div></div>
+        <div class="cell"><div class="player"><div class="name">BTP</div><div class="meta">$5</div></div></div>
 
         <!-- $4 row -->
         <div class="cell price">$4</div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$4</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$4</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$4</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$4</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$4</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Shmoorinho</div><div class="meta">$4</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Perverts Only</div><div class="meta">$4</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Dr Beanz</div><div class="meta">$4</div></div></div>
+        <div class="cell"><div class="player"><div class="name">WARRIORS chest painters</div><div class="meta">$4</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Cemetary Mittsy</div><div class="meta">$4</div></div></div>
 
         <!-- $3 row -->
         <div class="cell price">$3</div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$3</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$3</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$3</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$3</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$3</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Sure Hands</div><div class="meta">$3</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Stacked Boyyoz</div><div class="meta">$3</div></div></div>
+        <div class="cell"><div class="player"><div class="name">A Train</div><div class="meta">$3</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Marlboro Boyz</div><div class="meta">$3</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Ning Dong Nu</div><div class="meta">$3</div></div></div>
 
         <!-- $2 row -->
         <div class="cell price">$2</div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$2</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$2</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$2</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$2</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$2</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Train Father</div><div class="meta">$2</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Pedro and the midfield baskets</div><div class="meta">$2</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Shmoo Goldinho</div><div class="meta">$2</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Doubles pairings galore, Hefty Lefty and Beanz doubles pairing, Sco and Gunner doubles pairing</div><div class="meta">$2</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Scoeeeezy</div><div class="meta">$2</div></div></div>
 
         <!-- $1 row -->
         <div class="cell price">$1</div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$1</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$1</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$1</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$1</div></div></div>
-        <div class="cell"><div class="player"><img alt="" /><div class="name">—</div><div class="meta">$1</div></div></div>
+        <div class="cell"><div class="player"><div class="name">da gunnnnaaaa</div><div class="meta">$1</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Weha07boyyoz.com site owners (priorities and requirements)</div><div class="meta">$1</div></div></div>
+        <div class="cell"><div class="player"><div class="name">School Boy</div><div class="meta">$1</div></div></div>
+        <div class="cell"><div class="player"><div class="name">Double D, D Seel + D mac</div><div class="meta">$1</div></div></div>
+        <div class="cell"><div class="player"><div class="name">A Trizzle</div><div class="meta">$1</div></div></div>
+
       </div>
     </div>
 
@@ -162,16 +197,6 @@
 <footer class="container" style="padding:28px 0;opacity:.8">
   Built with ❤️ on GitHub Pages • <a href="/">weha07boyoz.com</a>
 </footer>
-
-<script>
-  /* Starter budget logic hook — wire up selections next */
-  const budgetTotal = 15;
-  function setBudget(spent){
-    document.getElementById('spent').textContent = `$${spent}`;
-    document.getElementById('left').textContent = `$${Math.max(0, budgetTotal - spent)}`;
-  }
-  setBudget(0);
-</script>
 
 </body>
 </html>
