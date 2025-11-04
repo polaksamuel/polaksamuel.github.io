@@ -23,11 +23,12 @@
     background:var(--bg);
     color:var(--ink);
     font-family:Poppins,system-ui,Segoe UI,Roboto,Arial,sans-serif;
+    -webkit-text-size-adjust:100%;
   }
   a{color:var(--brand);text-decoration:none}
   .container{max-width:1080px;margin:0 auto;padding:0 20px}
 
-  /* ---------- NAV (same vibe as home) ---------- */
+  /* ---------- NAV ---------- */
   .nav{
     position:sticky;top:0;z-index:50;
     display:flex;justify-content:space-between;align-items:center;
@@ -45,7 +46,7 @@
   /* ---------- Header ---------- */
   header{padding:48px 0 10px;text-align:center}
   h1{
-    font-size:clamp(32px,6vw,60px);line-height:1.05;margin:6px 0 8px;font-weight:800;
+    font-size:clamp(30px,6vw,56px);line-height:1.05;margin:6px 0 8px;font-weight:800;
     text-shadow:0 8px 40px rgba(0,0,0,.6)
   }
   .tag{
@@ -63,6 +64,11 @@
 
   /* ---------- Grid ---------- */
   .grid-wrap{margin-top:18px}
+  .grid-scroll{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin;
+  }
   .grid{
     display:grid;
     grid-template-columns: 88px repeat(5, 1fr); /* price + 5 custom columns */
@@ -94,7 +100,7 @@
   }
   .player .name{
     font-weight:600;
-    font-size:.82rem;          /* compact */
+    font-size:.82rem;          /* compact for long labels */
     line-height:1.15;
     overflow-wrap:anywhere;    /* aggressive wrapping for long labels */
     word-break:break-word;
@@ -106,14 +112,18 @@
     font-size:.78rem;
   }
 
-  /* Mobile tweaks */
+  /* ---------- Mobile tweaks ---------- */
   @media (max-width: 980px){
     .grid{grid-template-columns: 72px repeat(5, 1fr)}
     .cell{min-height:86px}
     .player .name{font-size:.8rem}
   }
-  @media (max-width: 720px){
-    .player .name{font-size:.78rem}
+  @media (max-width: 640px){
+    /* Let users swipe horizontally so columns don't get squished */
+    .grid{ min-width: 820px } /* adjust if you want wider/narrower */
+    .cell{ min-height:82px; padding:8px }
+    .player .name{ font-size:.78rem }
+    .cell.header{ padding:10px 8px }
   }
 </style>
 </head>
@@ -131,63 +141,65 @@
 <header class="container">
   <span class="tag">OFFICIAL FANTASY BBALL SITE</span>
   <h1>Starting 5 — Jollies</h1>
-  <p class="sub">Build your lineup with <b>$15</b>. Images and interactivity can come later — this is the clean grid skeleton.</p>
+  <p class="sub">Build your lineup with <b>$15</b>. Images & interactivity can come later — this is the clean grid skeleton.</p>
 </header>
 
 <main class="container">
   <div class="card">
 
     <div class="grid-wrap">
-      <div class="grid" id="grid">
+      <div class="grid-scroll">
+        <div class="grid" id="grid">
 
-        <!-- Headers -->
-        <div class="cell header"></div>
-        <div class="cell header">Alternate Boyyoz</div>
-        <div class="cell header">Sub Chats</div>
-        <div class="cell header">Alternate Boyyoz 2</div>
-        <div class="cell header">Sub Pairings and Group</div>
-        <div class="cell header">Alternate Boyyoz Egoz</div>
+          <!-- Headers -->
+          <div class="cell header"></div>
+          <div class="cell header">Alternate Boyyoz</div>
+          <div class="cell header">Sub Chats</div>
+          <div class="cell header">Alternate Boyyoz 2</div>
+          <div class="cell header">Sub Pairings and Group</div>
+          <div class="cell header">Alternate Boyyoz Egoz</div>
 
-        <!-- $5 row -->
-        <div class="cell price">$5</div>
-        <div class="cell"><div class="player"><div class="name">Hennessy Baba</div><div class="meta">$5</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Baseball Boyyoz</div><div class="meta">$5</div></div></div>
-        <div class="cell"><div class="player"><div class="name">GDN</div><div class="meta">$5</div></div></div>
-        <div class="cell"><div class="player"><div class="name">CCWest all-conference soccer thank you very much (Nico, PJV, Beanz, Roc, Shmoo)</div><div class="meta">$5</div></div></div>
-        <div class="cell"><div class="player"><div class="name">BTP</div><div class="meta">$5</div></div></div>
+          <!-- $5 row -->
+          <div class="cell price">$5</div>
+          <div class="cell"><div class="player"><div class="name">Hennessy Baba</div><div class="meta">$5</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Baseball Boyyoz</div><div class="meta">$5</div></div></div>
+          <div class="cell"><div class="player"><div class="name">GDN</div><div class="meta">$5</div></div></div>
+          <div class="cell"><div class="player"><div class="name">CCWest all-conference soccer thank you very much (Nico, PJV, Beanz, Roc, Shmoo)</div><div class="meta">$5</div></div></div>
+          <div class="cell"><div class="player"><div class="name">BTP</div><div class="meta">$5</div></div></div>
 
-        <!-- $4 row -->
-        <div class="cell price">$4</div>
-        <div class="cell"><div class="player"><div class="name">Shmoorinho</div><div class="meta">$4</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Perverts Only</div><div class="meta">$4</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Dr Beanz</div><div class="meta">$4</div></div></div>
-        <div class="cell"><div class="player"><div class="name">WARRIORS chest painters</div><div class="meta">$4</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Cemetary Mittsy</div><div class="meta">$4</div></div></div>
+          <!-- $4 row -->
+          <div class="cell price">$4</div>
+          <div class="cell"><div class="player"><div class="name">Shmoorinho</div><div class="meta">$4</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Perverts Only</div><div class="meta">$4</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Dr Beanz</div><div class="meta">$4</div></div></div>
+          <div class="cell"><div class="player"><div class="name">WARRIORS chest painters</div><div class="meta">$4</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Cemetary Mittsy</div><div class="meta">$4</div></div></div>
 
-        <!-- $3 row -->
-        <div class="cell price">$3</div>
-        <div class="cell"><div class="player"><div class="name">Sure Hands</div><div class="meta">$3</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Stacked Boyyoz</div><div class="meta">$3</div></div></div>
-        <div class="cell"><div class="player"><div class="name">A Train</div><div class="meta">$3</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Marlboro Boyz</div><div class="meta">$3</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Ning Dong Nu</div><div class="meta">$3</div></div></div>
+          <!-- $3 row -->
+          <div class="cell price">$3</div>
+          <div class="cell"><div class="player"><div class="name">Sure Hands</div><div class="meta">$3</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Stacked Boyyoz</div><div class="meta">$3</div></div></div>
+          <div class="cell"><div class="player"><div class="name">A Train</div><div class="meta">$3</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Marlboro Boyz</div><div class="meta">$3</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Ning Dong Nu</div><div class="meta">$3</div></div></div>
 
-        <!-- $2 row -->
-        <div class="cell price">$2</div>
-        <div class="cell"><div class="player"><div class="name">Train Father</div><div class="meta">$2</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Pedro and the midfield baskets</div><div class="meta">$2</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Shmoo Goldinho</div><div class="meta">$2</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Doubles pairings galore, Hefty Lefty and Beanz doubles pairing, Sco and Gunner doubles pairing</div><div class="meta">$2</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Scoeeeezy</div><div class="meta">$2</div></div></div>
+          <!-- $2 row -->
+          <div class="cell price">$2</div>
+          <div class="cell"><div class="player"><div class="name">Train Father</div><div class="meta">$2</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Pedro and the midfield baskets</div><div class="meta">$2</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Shmoo Goldinho</div><div class="meta">$2</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Doubles pairings galore, Hefty Lefty and Beanz doubles pairing, Sco and Gunner doubles pairing</div><div class="meta">$2</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Scoeeeezy</div><div class="meta">$2</div></div></div>
 
-        <!-- $1 row -->
-        <div class="cell price">$1</div>
-        <div class="cell"><div class="player"><div class="name">da gunnnnaaaa</div><div class="meta">$1</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Weha07boyyoz.com site owners (priorities and requirements)</div><div class="meta">$1</div></div></div>
-        <div class="cell"><div class="player"><div class="name">School Boy</div><div class="meta">$1</div></div></div>
-        <div class="cell"><div class="player"><div class="name">Double D, D Seel + D mac</div><div class="meta">$1</div></div></div>
-        <div class="cell"><div class="player"><div class="name">A Trizzle</div><div class="meta">$1</div></div></div>
+          <!-- $1 row -->
+          <div class="cell price">$1</div>
+          <div class="cell"><div class="player"><div class="name">da gunnnnaaaa</div><div class="meta">$1</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Weha07boyyoz.com site owners (priorities and requirements)</div><div class="meta">$1</div></div></div>
+          <div class="cell"><div class="player"><div class="name">School Boy</div><div class="meta">$1</div></div></div>
+          <div class="cell"><div class="player"><div class="name">Double D, D Seel + D mac</div><div class="meta">$1</div></div></div>
+          <div class="cell"><div class="player"><div class="name">A Trizzle</div><div class="meta">$1</div></div></div>
 
+        </div>
       </div>
     </div>
 
