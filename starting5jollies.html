@@ -22,7 +22,7 @@
   a{color:var(--brand);text-decoration:none}
   .container{max-width:1080px;margin:0 auto;padding:0 20px}
 
-  /* ---------- NAV (same look as home) ---------- */
+  /* ---------- NAV ---------- */
   .nav{
     position:sticky;top:0;z-index:50;
     display:flex;justify-content:space-between;align-items:center;
@@ -35,13 +35,11 @@
 
   /* ---------- Header ---------- */
   header{padding:48px 0 10px;text-align:center}
-  h1{font-size:clamp(32px,6vw,60px);line-height:1.05;margin:6px 0 8px;font-weight:800;
-     text-shadow:0 8px 40px rgba(0,0,0,.6)}
-  .tag{display:inline-block;padding:7px 12px;border:1px solid rgba(255,255,255,.2);
-       border-radius:999px;color:var(--muted);font-size:.9rem;background:rgba(20,24,58,.45)}
+  h1{font-size:clamp(32px,6vw,60px);line-height:1.05;margin:6px 0 8px;font-weight:800;text-shadow:0 8px 40px rgba(0,0,0,.6)}
+  .tag{display:inline-block;padding:7px 12px;border:1px solid rgba(255,255,255,.2);border-radius:999px;color:var(--muted);font-size:.9rem;background:rgba(20,24,58,.45)}
   .sub{opacity:.9}
 
-  /* ---------- Card wrapper ---------- */
+  /* ---------- Card ---------- */
   .card{
     background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
     border:1px solid var(--rim); border-radius:20px; padding:22px;
@@ -52,7 +50,7 @@
   .grid-wrap{margin-top:18px}
   .grid{
     display:grid;
-    grid-template-columns: 90px repeat(5, 1fr); /* price + 5 positions */
+    grid-template-columns: 90px repeat(5, 1fr); /* price + 5 custom columns */
     gap:10px;
   }
   .cell{
@@ -66,26 +64,13 @@
   .cell.header{background:rgba(56,211,255,.08);border-color:rgba(56,211,255,.25);font-weight:700}
   .cell.price{background:rgba(255,255,255,.02);font-weight:700}
 
-  /* player tile look (for later when we add images) */
-  .player{
-    width:100%;height:100%;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
-  }
-  .player img{
-    width:64px;height:64px;object-fit:cover;border-radius:10px;
-    border:1px solid rgba(255,255,255,.12);
-  }
+  .player{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px}
+  .player img{width:64px;height:64px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,.12)}
   .player .name{font-weight:600;font-size:.95rem}
   .player .meta{opacity:.85;font-size:.8rem}
 
-  /* Budget bar */
-  .budget{
-    display:flex;justify-content:space-between;align-items:center;
-    gap:10px;margin-top:14px;padding:12px 14px;border:1px dashed var(--rim);border-radius:12px;
-    background:rgba(255,255,255,.03)
-  }
+  .budget{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:14px;padding:12px 14px;border:1px dashed var(--rim);border-radius:12px;background:rgba(255,255,255,.03)}
 
-  /* Mobile */
   @media (max-width: 860px){
     .grid{grid-template-columns: 70px repeat(5, 1fr)}
     .player img{width:56px;height:56px}
@@ -106,7 +91,7 @@
 <header class="container">
   <span class="tag">OFFICIAL FANTASY BBALL SITE</span>
   <h1>Starting 5 — Jollies</h1>
-  <p class="sub">Build your lineup with <b>$15</b>. Tap players to select — we’ll add logic next.</p>
+  <p class="sub">Build your lineup with <b>$15</b>. Tap players to select — we’ll wire up logic next.</p>
 </header>
 
 <main class="container">
@@ -123,11 +108,11 @@
       <div class="grid" id="grid">
         <!-- Top headers -->
         <div class="cell header"></div>
-        <div class="cell header">PG</div>
-        <div class="cell header">SG</div>
-        <div class="cell header">SF</div>
-        <div class="cell header">PF</div>
-        <div class="cell header">C</div>
+        <div class="cell header">Alternate Boyyoz</div>
+        <div class="cell header">Sub Chats</div>
+        <div class="cell header">Alternate Boyyoz 2</div>
+        <div class="cell header">Sub Pairings and Group</div>
+        <div class="cell header">Alternate Boyyos Egoz</div>
 
         <!-- $5 row -->
         <div class="cell price">$5</div>
@@ -179,7 +164,7 @@
 </footer>
 
 <script>
-  /* Starter budget logic hook — we’ll wire up selections next */
+  /* Starter budget logic hook — wire up selections next */
   const budgetTotal = 15;
   function setBudget(spent){
     document.getElementById('spent').textContent = `$${spent}`;
@@ -190,4 +175,3 @@
 
 </body>
 </html>
-
